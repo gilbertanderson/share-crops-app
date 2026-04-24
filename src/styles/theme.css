@@ -1,0 +1,333 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Share Crops Design System - Material Design Tokens */
+
+  /* Typography Scale */
+  --font-size: 16px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing Scale (Material Design 8px grid) */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+  --radius: 0.5rem;
+
+  /* Elevation (Box Shadows) */
+  --elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --elevation-2: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --elevation-3: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --elevation-4: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --elevation-5: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+  /* Color Tokens - Produce-Inspired Palette */
+  --background: #FDFCF9;
+  --foreground: #2D2416;
+
+  /* Primary - Forest Green (main brand color) */
+  --primary: #2D6A2D;
+  --primary-hover: #1F511F;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary - Fresh Green (produce, growth) */
+  --secondary: #52B788;
+  --secondary-hover: #40916C;
+  --secondary-foreground: #FFFFFF;
+
+  /* Accent - Warm Earth (community, trust) */
+  --accent: #F4A261;
+  --accent-hover: #E76F51;
+  --accent-foreground: #2D2416;
+
+  /* Neutral Grays */
+  --muted: #F5F3F0;
+  --muted-foreground: #6B6456;
+  --border: #E0DCD5;
+
+  /* Semantic Colors */
+  --success: #52B788;
+  --success-foreground: #FFFFFF;
+  --warning: #F4A261;
+  --warning-foreground: #2D2416;
+  --error: #E63946;
+  --error-foreground: #FFFFFF;
+  --info: #457B9D;
+  --info-foreground: #FFFFFF;
+  --destructive: #E63946;
+  --destructive-foreground: #FFFFFF;
+
+  /* Surface Colors */
+  --card: #FFFFFF;
+  --card-foreground: #2D2416;
+  --popover: #FFFFFF;
+  --popover-foreground: #2D2416;
+
+  /* Input */
+  --input: transparent;
+  --input-background: #F5F3F0;
+  --input-border: #D4CFC5;
+  --input-focus-ring: #2D6A2D;
+  --switch-background: #D4CFC5;
+
+  /* Focus Ring */
+  --ring: #2D6A2D;
+
+  /* Tomato Rating Colors */
+  --tomato-empty: #E0DCD5;
+  --tomato-filled: #E63946;
+  --tomato-hover: #FF4655;
+
+  /* Community Badge Colors */
+  --badge-blue: #457B9D;
+  --badge-green: #52B788;
+  --badge-orange: #F4A261;
+  --badge-purple: #A663CC;
+
+  /* Charts */
+  --chart-1: #2D6A2D;
+  --chart-2: #52B788;
+  --chart-3: #F4A261;
+  --chart-4: #457B9D;
+  --chart-5: #A663CC;
+
+  /* Sidebar (for desktop) */
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #2D2416;
+  --sidebar-primary: #2D6A2D;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F5F3F0;
+  --sidebar-accent-foreground: #2D2416;
+  --sidebar-border: #E0DCD5;
+  --sidebar-ring: #2D6A2D;
+}
+
+.dark {
+  /* Share Crops Dark Theme - Warm Evening Palette */
+  --background: #1A1410;
+  --foreground: #F5F3F0;
+
+  /* Primary - Forest Green (slightly lightened for dark) */
+  --primary: #66BB6A;
+  --primary-hover: #81C784;
+  --primary-foreground: #1A1410;
+
+  /* Secondary - Fresh Green */
+  --secondary: #6BCF9F;
+  --secondary-hover: #85D9B3;
+  --secondary-foreground: #1A1410;
+
+  /* Accent - Warm Earth */
+  --accent: #FFB380;
+  --accent-hover: #FFBD94;
+  --accent-foreground: #1A1410;
+
+  /* Neutral Grays */
+  --muted: #2D2416;
+  --muted-foreground: #B8AFA0;
+  --border: #3D3428;
+
+  /* Semantic Colors */
+  --success: #6BCF9F;
+  --success-foreground: #1A1410;
+  --warning: #FFB380;
+  --warning-foreground: #1A1410;
+  --error: #FF6B77;
+  --error-foreground: #1A1410;
+  --info: #6B9DC7;
+  --info-foreground: #1A1410;
+  --destructive: #FF6B77;
+  --destructive-foreground: #1A1410;
+
+  /* Surface Colors */
+  --card: #24201A;
+  --card-foreground: #F5F3F0;
+  --popover: #24201A;
+  --popover-foreground: #F5F3F0;
+
+  /* Input */
+  --input: transparent;
+  --input-background: #2D2416;
+  --input-border: #3D3428;
+  --input-focus-ring: #66BB6A;
+  --switch-background: #3D3428;
+
+  /* Focus Ring */
+  --ring: #66BB6A;
+
+  /* Tomato Rating Colors */
+  --tomato-empty: #3D3428;
+  --tomato-filled: #FF6B77;
+  --tomato-hover: #FF8590;
+
+  /* Sidebar */
+  --sidebar: #24201A;
+  --sidebar-foreground: #F5F3F0;
+  --sidebar-primary: #66BB6A;
+  --sidebar-primary-foreground: #1A1410;
+  --sidebar-accent: #2D2416;
+  --sidebar-accent-foreground: #F5F3F0;
+  --sidebar-border: #3D3428;
+  --sidebar-ring: #66BB6A;
+}
+
+@theme inline {
+  /* Base Colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  /* Brand Colors */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-foreground: var(--accent-foreground);
+
+  /* Neutral Colors */
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+
+  /* Semantic Colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /* Input Colors */
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-input-border: var(--input-border);
+  --color-input-focus-ring: var(--input-focus-ring);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+
+  /* Tomato Rating */
+  --color-tomato-empty: var(--tomato-empty);
+  --color-tomato-filled: var(--tomato-filled);
+  --color-tomato-hover: var(--tomato-hover);
+
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Border Radius */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}

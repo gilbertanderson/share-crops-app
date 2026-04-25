@@ -111,10 +111,25 @@ export class API {
   }
 
   static async resetPassword(email: string) {
-    return this.request('/auth/reset-password', {
+    const supabaseUrl = `https://${projectId}.supabase.co`;
+    const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': publicAnonKey,
+      },
+      body: JSON.stringify({
+        email,
+        redirect_to: `${window.location.origin}/reset-password`,
+      }),
     });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error_description || data.msg || 'Password reset failed');
+    }
+
+    return { success: true };
   }
 
   // Communities

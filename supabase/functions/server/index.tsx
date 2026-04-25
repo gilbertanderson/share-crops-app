@@ -76,14 +76,193 @@ const initStorage = async () => {
   }
 };
 
+// Initialize mock ratings data
+const initMockData = async () => {
+  try {
+    // Check if mock data already initialized
+    const mockDataFlag = await kv.get('mock_data:initialized');
+    if (mockDataFlag) {
+      console.log('Mock data already initialized');
+      return;
+    }
+
+    // Create mock sellers with ratings
+    const mockSellers = [
+      {
+        id: 'seller-mock-1',
+        email: 'seller@example.com',
+        name: 'John\'s Garden',
+        bio: 'Fresh organic vegetables from local garden',
+        rating: 4.5,
+        ratingCount: 8,
+        profilePhotoUrl: '',
+      },
+      {
+        id: 'seller-mock-2',
+        email: 'alice@example.com',
+        name: 'Alice\'s Farmers Market',
+        bio: 'Seasonal produce, always fresh',
+        rating: 4.8,
+        ratingCount: 12,
+        profilePhotoUrl: '',
+      },
+      {
+        id: 'seller-mock-3',
+        email: 'bob@example.com',
+        name: 'Bob\'s Community Farm',
+        bio: 'Supporting local agriculture',
+        rating: 4.2,
+        ratingCount: 5,
+        profilePhotoUrl: '',
+      },
+    ];
+
+    // Save mock sellers
+    for (const seller of mockSellers) {
+      const existingUser = await kv.get(`user:${seller.id}`);
+      if (!existingUser) {
+        await kv.set(`user:${seller.id}`, seller);
+        console.log(`Created mock seller: ${seller.name}`);
+      }
+    }
+
+    // Create mock community
+    const communityId = 'community-mock-1';
+    const existingCommunity = await kv.get(`community:id:${communityId}`);
+    if (!existingCommunity) {
+      const mockCommunity = {
+        id: communityId,
+        name: 'Demo Community',
+        zipCode: '12345',
+        createdBy: 'seller-mock-1',
+        memberCount: mockSellers.length,
+        createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+      await kv.set(`community:id:${communityId}`, mockCommunity);
+      await kv.set(`community:12345:Demo Community`, mockCommunity);
+      console.log('Created mock community');
+    }
+
+    // Create mock ratings for each seller
+    for (const seller of mockSellers) {
+      const ratingCount = seller.ratingCount;
+      for (let i = 0; i < ratingCount; i++) {
+        const ratingId = crypto.randomUUID();
+        const rating = seller.rating + (Math.random() * 0.5 - 0.25); // Slight variation
+        const mockRating = {
+          id: ratingId,
+          offerId: `offer-mock-${seller.id}-${i}`,
+          ratedUserId: seller.id,
+          raterUserId: `buyer-mock-${i}`,
+          rating: Math.round(Math.max(1, Math.min(5, rating)) * 2) / 2, // Round to 0.5
+          comment: [
+            'Great exchange! Highly recommend.',
+            'Fresh produce, very reliable seller.',
+            'Perfect quality and communication.',
+            'Will definitely buy again.',
+            'Best seller in our community.',
+            'Amazing vegetables and fair pricing.',
+            'Professional and trustworthy.',
+            'Excellent service and quality.',
+            'Consistently great products.',
+            'Happy with every transaction.',
+            'Highly satisfied with the produce.',
+            'Wonderful community member.',
+          ][i % 12],
+          createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+        };
+
+        // Only store if not already exists
+        const existingRating = await kv.get(`rating:user:${seller.id}:${ratingId}`);
+        if (!existingRating) {
+          await kv.set(`rating:${ratingId}`, mockRating);
+          await kv.set(`rating:user:${seller.id}:${ratingId}`, mockRating);
+        }
+      }
+    }
+
+    // Create mock listings for sellers
+    const mockListings = [
+      {
+        title: 'Fresh Tomatoes',
+        description: 'Ripe red tomatoes picked fresh from the garden',
+        quantity: '5 lbs',
+        sellerId: 'seller-mock-1',
+        communityId: 'community-mock-1',
+      },
+      {
+        title: 'Organic Lettuce',
+        description: 'Crisp organic lettuce, perfect for salads',
+        quantity: '2 bunches',
+        sellerId: 'seller-mock-2',
+        communityId: 'community-mock-1',
+      },
+      {
+        title: 'Homegrown Peppers',
+        description: 'Assorted sweet and hot peppers',
+        quantity: '1 dozen',
+        sellerId: 'seller-mock-3',
+        communityId: 'community-mock-1',
+      },
+      {
+        title: 'Fresh Basil',
+        description: 'Fragrant fresh basil for cooking',
+        quantity: '1 bunch',
+        sellerId: 'seller-mock-1',
+        communityId: 'community-mock-1',
+      },
+      {
+        title: 'Zucchini',
+        description: 'Green zucchini, great for grilling',
+        quantity: '3 medium',
+        sellerId: 'seller-mock-2',
+        communityId: 'community-mock-1',
+      },
+    ];
+
+    for (const listingData of mockListings) {
+      const listingId = `listing-mock-${crypto.randomUUID().substring(0, 8)}`;
+      const existingListing = await kv.get(`listing:${listingId}`);
+      
+      if (!existingListing) {
+        const mockListing = {
+          id: listingId,
+          title: listingData.title,
+          description: listingData.description,
+          quantity: listingData.quantity,
+          sellerId: listingData.sellerId,
+          communityId: listingData.communityId,
+          status: 'active',
+          photos: [],
+          lookingFor: 'Open to reasonable offers',
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date(Date.now() - Math.random() * 14 * 24 * 60 * 60 * 1000).toISOString(),
+          seller: mockSellers.find(s => s.id === listingData.sellerId),
+          zipCode: '12345',
+        };
+
+        await kv.set(`listing:${listingId}`, mockListing);
+        await kv.set(`listing:community:${listingData.communityId}:${listingId}`, mockListing);
+        console.log(`Created mock listing: ${mockListing.title}`);
+      }
+    }
+
+    // Mark mock data as initialized
+    await kv.set('mock_data:initialized', { timestamp: new Date().toISOString() });
+    console.log('Mock rating data initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize mock data:', error);
+  }
+};
+
 // Initialize on startup
 initStorage();
+initMockData();
 
 // Helper: Get authenticated user
 const getAuthUser = async (authHeader: string | null) => {
   if (!authHeader) {
     security.logSecurityEvent('missing_auth_header', 'medium', { timestamp: new Date().toISOString() });
-    return null;
   }
 
   // Validate token structure
@@ -247,6 +426,7 @@ app.post("/make-server-dd877831/auth/signup", async (c) => {
     // Validate password strength (min 8 chars, at least 1 uppercase, 1 number)
     if (password.length < 8 || !/[A-Z]/.test(password) || !/\d/.test(password)) {
       return c.json({ error: "Password must be at least 8 characters with uppercase and numbers" }, 400);
+        console.log('Initializing mock data...');
     }
 
     // Prevent SQL injection patterns

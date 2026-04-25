@@ -133,6 +133,26 @@ export class API {
     return { success: true };
   }
 
+  static async updatePasswordWithToken(accessToken: string, newPassword: string): Promise<{ success: boolean }> {
+    const supabaseUrl = `https://${projectId}.supabase.co`;
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': publicAnonKey,
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ password: newPassword }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error_description || data.msg || 'Failed to update password');
+    }
+
+    return { success: true };
+  }
+
   // Communities
   static async createCommunity(name: string, zipCode: string): Promise<{ community: Community }> {
     return this.request('/communities', {

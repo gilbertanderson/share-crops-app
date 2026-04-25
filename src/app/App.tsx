@@ -8,6 +8,7 @@ import { ListingDetail } from './components/ListingDetail';
 import { Offers } from './components/Offers';
 import { ChatList, ChatThread } from './components/Chat';
 import { Profile } from './components/Profile';
+import { ResetPassword } from './components/ResetPassword';
 
 export default function App() {
   const { isAuthenticated, hasCompletedSetup, loading, refreshAuth, logout } = useAuth();
@@ -52,6 +53,7 @@ export default function App() {
             : <Auth onSuccess={refreshAuth} />
         }
       />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Authenticated but needs community setup */}
       <Route
@@ -77,10 +79,21 @@ export default function App() {
         </Route>
       </Route>
 
-      {/* Catch-all */}
-      <Route path="*" element={<Navigate to="/marketplace" replace />} />
+      {/* Catch-all — intercepts Supabase recovery redirects that land at the wrong path
+           (happens when redirect_to isn't whitelisted in the Supabase dashboard) */}
+      <Route path="*" element={<CatchAll />} />
     </Routes>
   );
+}
+
+function CatchAll() {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(window.location.search);
+  // Recovery token landed at wrong URL because redirect_to wasn't whitelisted in Supabase
+  if (hash.get('type') === 'recovery' || query.get('type') === 'recovery') {
+    return <Navigate to={'/reset-password' + window.location.search + window.location.hash} replace />;
+  }
+  return <Navigate to="/marketplace" replace />;
 }
 
 function RequireAuth({ isAuthenticated, hasSetup }: { isAuthenticated: boolean; hasSetup: boolean }) {

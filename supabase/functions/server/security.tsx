@@ -10,6 +10,18 @@ const REQUEST_TIMEOUT = 30000; // 30 second timeout
 // In-memory rate limit store (replace with Redis/KV in production)
 const rateLimitStore = new Map<string, Array<number>>();
 
+// Auth-specific rate limit: 10 requests per 15 minutes per IP
+const AUTH_RATE_LIMIT_WINDOW = 15 * 60 * 1000;
+const AUTH_RATE_LIMIT_MAX = 10;
+const authRateLimitStore = new Map<string, Array<number>>();
+
+// Failed login tracking: lockout per-email (5 failures) or per-IP (20 failures) within 15 min
+const LOCKOUT_WINDOW = 15 * 60 * 1000;
+const LOCKOUT_MAX_EMAIL = 5;
+const LOCKOUT_MAX_IP = 20;
+const LOCKOUT_DURATION = 15 * 60 * 1000;
+const failedLoginStore = new Map<string, { count: number; lockedUntil: number; timestamps: number[] }>();
+
 /**
  * Extract client IP from request headers (respects proxies)
  */
@@ -48,6 +60,72 @@ export const rateLimit = (req: any): { allowed: boolean; remaining: number; rese
   const resetTime = requests.length > 0 ? requests[0] + RATE_LIMIT_WINDOW : now + RATE_LIMIT_WINDOW;
 
   return { allowed, remaining, resetTime };
+};
+
+/**
+ * Auth-specific rate limiter — tighter window than the global limit.
+ * Applies only to login / signup routes.
+ */
+export const authRateLimit = (req: any): { allowed: boolean; remaining: number; resetTime: number } => {
+  const clientIp = getClientIp(req);
+  const now = Date.now();
+  const windowStart = now - AUTH_RATE_LIMIT_WINDOW;
+
+  let requests = authRateLimitStore.get(clientIp) || [];
+  requests = requests.filter((ts) => ts > windowStart);
+
+  const allowed = requests.length < AUTH_RATE_LIMIT_MAX;
+  if (allowed) requests.push(now);
+  authRateLimitStore.set(clientIp, requests);
+
+  const remaining = Math.max(0, AUTH_RATE_LIMIT_MAX - requests.length);
+  const resetTime = requests.length > 0 ? requests[0] + AUTH_RATE_LIMIT_WINDOW : now + AUTH_RATE_LIMIT_WINDOW;
+
+  return { allowed, remaining, resetTime };
+};
+
+/**
+ * Record a failed login attempt for the given email + IP.
+ * Locks the account after LOCKOUT_MAX_EMAIL failures within LOCKOUT_WINDOW.
+ */
+export const trackFailedLogin = (email: string, ip: string): void => {
+  const now = Date.now();
+  const windowStart = now - LOCKOUT_WINDOW;
+
+  for (const [key, max] of [
+    [`email:${email.toLowerCase()}`, LOCKOUT_MAX_EMAIL] as const,
+    [`ip:${ip}`, LOCKOUT_MAX_IP] as const,
+  ]) {
+    const entry = failedLoginStore.get(key) ?? { count: 0, lockedUntil: 0, timestamps: [] };
+    entry.timestamps = entry.timestamps.filter((ts) => ts > windowStart);
+    entry.timestamps.push(now);
+    if (entry.timestamps.length >= max) {
+      entry.lockedUntil = now + LOCKOUT_DURATION;
+    }
+    entry.count = entry.timestamps.length;
+    failedLoginStore.set(key, entry);
+  }
+};
+
+/**
+ * Returns whether the email or IP is currently locked out and seconds until unlock.
+ */
+export const isLockedOut = (email: string, ip: string): { locked: boolean; retryAfter: number } => {
+  const now = Date.now();
+  for (const key of [`email:${email.toLowerCase()}`, `ip:${ip}`]) {
+    const entry = failedLoginStore.get(key);
+    if (entry && entry.lockedUntil > now) {
+      return { locked: true, retryAfter: Math.ceil((entry.lockedUntil - now) / 1000) };
+    }
+  }
+  return { locked: false, retryAfter: 0 };
+};
+
+/**
+ * Clear the failed-attempt record for an email on successful login.
+ */
+export const resetFailedLogin = (email: string): void => {
+  failedLoginStore.delete(`email:${email.toLowerCase()}`);
 };
 
 /**
@@ -202,9 +280,21 @@ export const getSecurityHeaders = () => ({
   'X-Frame-Options': 'DENY',
   'X-XSS-Protection': '1; mode=block',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; '),
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Resource-Policy': 'same-origin',
 });
 
 /**

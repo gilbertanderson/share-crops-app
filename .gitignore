@@ -1,1 +1,5 @@
 share-crops-app/
+dist/
+test-results/
+.DS_Store
+

@@ -39,6 +39,7 @@ export function ResetPassword() {
 
     const code = query.get('code');
     const accessToken = hash.get('access_token') || query.get('access_token');
+    const tokenType = hash.get('type') || query.get('type');
 
     if (code) {
       // PKCE flow: exchange the one-time code for a Supabase session
@@ -54,8 +55,8 @@ export function ResetPassword() {
             setTokenState({ status: 'pkce_ready' });
           }
         });
-    } else if (accessToken) {
-      // Implicit flow: access_token in hash
+    } else if (accessToken && tokenType === 'recovery') {
+      // Implicit flow: access_token + type=recovery in hash
       window.history.replaceState({}, '', '/reset-password');
       setTokenState({ status: 'direct', token: accessToken });
     } else {
@@ -85,6 +86,8 @@ export function ResetPassword() {
         // Session is already established on the Supabase client
         const { error: err } = await supabase.auth.updateUser({ password });
         if (err) throw err;
+        // Sign out the recovery session so the user logs in fresh with the new password
+        await supabase.auth.signOut();
       } else if (tokenState.status === 'direct') {
         await API.updatePasswordWithToken(tokenState.token, password);
       } else {
@@ -110,8 +113,8 @@ export function ResetPassword() {
             <p className="text-center text-muted-foreground py-6">Verifying your reset link…</p>
           ) : success ? (
             <div className="space-y-4 text-center">
-              <div className="bg-green-50 border border-green-200 rounded-md p-4 dark:bg-green-950/20 dark:border-green-800">
-                <p className="text-sm text-green-800 dark:text-green-300">
+              <div className="bg-success/10 border border-success rounded-md p-4">
+                <p className="text-sm text-success font-medium">
                   Your password has been updated successfully.
                 </p>
               </div>
@@ -123,7 +126,21 @@ export function ResetPassword() {
                 Continue to Log In
               </Button>
             </div>
-          ) : tokenState.status === 'invalid' && !error ? null : (
+          ) : tokenState.status === 'invalid' ? (
+            <div className="space-y-4 text-center">
+              <div role="alert" className="bg-error/10 border border-error rounded-md p-4">
+                <p className="text-sm text-error">{error}</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate('/login')}
+              >
+                Back to Log In
+              </Button>
+            </div>
+          ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="new-password">New Password</Label>
@@ -134,7 +151,6 @@ export function ResetPassword() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={tokenState.status === 'invalid'}
                   className="bg-input-background border-input-border"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -151,13 +167,12 @@ export function ResetPassword() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  disabled={tokenState.status === 'invalid'}
                   className="bg-input-background border-input-border"
                 />
               </div>
 
               {error && (
-                <div className="bg-error/10 border border-error rounded-md p-3">
+                <div role="alert" className="bg-error/10 border border-error rounded-md p-3">
                   <p className="text-sm text-error">{error}</p>
                 </div>
               )}
@@ -165,7 +180,7 @@ export function ResetPassword() {
               <Button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
-                disabled={submitting || tokenState.status === 'invalid'}
+                disabled={submitting}
               >
                 {submitting ? 'Updating…' : 'Update Password'}
               </Button>

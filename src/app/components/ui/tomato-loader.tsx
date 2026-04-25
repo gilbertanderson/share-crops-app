@@ -60,7 +60,7 @@ export function TomatoLoader({
   }, []);
 
   return (
-    <div className={cn('text-center space-y-3', className)}>
+    <div role="status" aria-live="polite" className={cn('text-center space-y-3', className)}>
       <svg
         viewBox="0 0 48 48"
         className={cn('mx-auto', sizeClasses[size])}

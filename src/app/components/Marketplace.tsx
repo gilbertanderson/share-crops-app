@@ -54,19 +54,23 @@ export function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreate, setShowCreate] = useState(false);
 
-  const { data: communityData } = useQuery({
+  const { data: communityData, isLoading: isCommunityLoading } = useQuery({
     queryKey: ['my-community'],
     queryFn: () => API.getMyCommunity(),
   });
   const community = communityData?.community ?? null;
 
-  const { data: listingsData, isLoading } = useQuery({
+  const { data: listingsData, isLoading: isListingsLoading } = useQuery({
     queryKey: ['listings', filter, community?.id ?? null],
     queryFn: () =>
       API.getListings(filter === 'community' && community ? { communityId: community.id } : {}),
     enabled: filter === 'all' || !!community,
   });
   const listings: Listing[] = listingsData?.listings ?? [];
+
+  // Avoid flashing empty state before community context resolves and listings query can start.
+  const showListingsLoader =
+    isCommunityLoading || (filter === 'community' && communityData === undefined) || isListingsLoading;
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredListings = normalizedQuery
@@ -148,7 +152,7 @@ export function Marketplace() {
         {filter === 'all' && community?.zipCode && (
           <TrendingSection zipCode={community.zipCode} />
         )}
-        {isLoading ? (
+        {showListingsLoader ? (
           <TomatoLoader label="Loading..." className="py-12" />
         ) : listings.length === 0 ? (
           <div className="text-center py-12 space-y-4">
@@ -286,7 +290,7 @@ export function CreateListing({ onClose, onSuccess }: { onClose: () => void; onS
               {photos.map((url, index) => (
                 <div key={index} className="relative aspect-square bg-muted rounded-lg overflow-hidden">
                   <img src={url} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                  <button type="button" onClick={() => setPhotos(photos.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-error text-error-foreground rounded-full w-6 h-6 flex items-center justify-center">×</button>
+                  <button type="button" aria-label={`Remove photo ${index + 1}`} onClick={() => setPhotos(photos.filter((_, i) => i !== index))} className="absolute top-1 right-1 bg-error text-error-foreground rounded-full w-6 h-6 flex items-center justify-center"><span aria-hidden="true">×</span></button>
                 </div>
               ))}
               {photos.length < 5 && (

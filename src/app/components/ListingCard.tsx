@@ -30,6 +30,10 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
   return (
     <Card
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`View listing: ${listing.title}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
       className={[
         'w-[398px] mx-auto cursor-pointer transition-all duration-200 overflow-hidden',
         inSeason ? 'in-season-card' : 'hover:shadow-2xl hover:-translate-y-0.5',
@@ -37,7 +41,7 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
     >
       <div className="relative w-[398px] h-[398px] bg-muted">
         {inSeason ? (
-          <span className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full shadow">
+          <span className="absolute top-2 left-2 z-0 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full shadow">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path d="M17.293 3.293a1 1 0 011.414 1.414l-10 10a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l9.293-9.293z" />
             </svg>

@@ -44,7 +44,14 @@ export default function App() {
   }
 
   return (
-    <Routes>
+    <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+      <Routes>
       {/* Public */}
       <Route
         path="/login"
@@ -85,6 +92,7 @@ export default function App() {
            (happens when redirect_to isn't whitelisted in the Supabase dashboard) */}
       <Route path="*" element={<CatchAll />} />
     </Routes>
+    </>
   );
 }
 
@@ -119,9 +127,11 @@ function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Outlet />
+      <main id="main-content" tabIndex={-1} className="outline-none">
+        <Outlet />
+      </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-inset-bottom">
+      <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-inset-bottom">
         <div className="flex items-center justify-around h-20 px-4">
           <NavButton
             icon={
@@ -179,6 +189,7 @@ function NavButton({ icon, label, active, onClick }: {
     <button
       type="button"
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       className={`flex flex-col items-center gap-1 min-w-[64px] transition-colors ${
         active ? 'text-primary' : 'text-muted-foreground'
       }`}

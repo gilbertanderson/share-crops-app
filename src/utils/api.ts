@@ -112,24 +112,11 @@ export class API {
   }
 
   static async resetPassword(email: string): Promise<{ success: boolean }> {
-    const supabaseUrl = `https://${projectId}.supabase.co`;
-    const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': publicAnonKey,
-      },
-      body: JSON.stringify({
-        email,
-        redirect_to: `${window.location.origin}/reset-password`,
-      }),
+    const { supabase } = await import('./supabase');
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
     });
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error_description || data.msg || 'Password reset failed');
-    }
-
+    if (error) throw new Error(error.message);
     return { success: true };
   }
 

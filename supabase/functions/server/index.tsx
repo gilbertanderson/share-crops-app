@@ -255,9 +255,98 @@ const initMockData = async () => {
   }
 };
 
+// Ensure tempUser has visible listing rankings seeded by another user.
+const seedTempUserRatings = async () => {
+  try {
+    const supabase = getServiceRoleClient();
+    const targetEmail = 'tempUser@share-crops.com';
+    const raterEmail = 'gilbertjanderson@gmail.com';
+
+    let tempUserId: string | null = null;
+    let raterUserId: string | null = null;
+
+    // Find both users in Supabase Auth so seeded ratings reference real accounts when available.
+    for (let page = 1; page <= 10 && (!tempUserId || !raterUserId); page++) {
+      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
+      if (error) {
+        console.error('Failed to list auth users for tempUser rating seed:', error);
+        return;
+      }
+
+      const users = data?.users ?? [];
+      if (!users.length) break;
+
+      for (const authUser of users) {
+        const email = authUser.email?.toLowerCase();
+        if (!tempUserId && email === targetEmail.toLowerCase()) {
+          tempUserId = authUser.id;
+        }
+        if (!raterUserId && email === raterEmail.toLowerCase()) {
+          raterUserId = authUser.id;
+        }
+      }
+    }
+
+    if (!tempUserId) {
+      console.log('tempUser not found; skipping tempUser rating seed');
+      return;
+    }
+
+    // If the requested rater account does not exist yet, keep deterministic seed data.
+    if (!raterUserId) {
+      raterUserId = 'seed-rater-gilbert';
+    }
+
+    const seedRatings = [
+      { rating: 5, comment: 'Great quality produce and very responsive.' },
+      { rating: 4, comment: 'Smooth exchange and exactly as described.' },
+      { rating: 5, comment: 'Excellent local grower. Would trade again.' },
+    ];
+
+    for (let i = 0; i < seedRatings.length; i++) {
+      const ratingId = `seed-tempuser-${tempUserId}-${i + 1}`;
+      const offerId = `seed-offer-tempuser-${i + 1}`;
+      const createdAt = new Date(Date.now() - (i + 1) * 24 * 60 * 60 * 1000).toISOString();
+      const seededRating = {
+        id: ratingId,
+        offerId,
+        ratedUserId: tempUserId,
+        raterUserId,
+        rating: seedRatings[i].rating,
+        comment: seedRatings[i].comment,
+        createdAt,
+      };
+
+      // Deterministic IDs keep this seed idempotent across restarts.
+      await kv.set(`rating:${ratingId}`, seededRating);
+      await kv.set(`rating:${offerId}:${raterUserId}`, seededRating);
+      await kv.set(`rating:user:${tempUserId}:${ratingId}`, seededRating);
+    }
+
+    // Recompute and persist aggregate score for profile/listing badges.
+    const allRatings = await kv.getByPrefix(`rating:user:${tempUserId}:`);
+    const count = allRatings.length;
+    const avg = count
+      ? allRatings.reduce((sum: number, r: any) => sum + (Number(r.rating) || 0), 0) / count
+      : 0;
+
+    const tempProfile = await kv.get(`user:${tempUserId}`);
+    if (tempProfile) {
+      tempProfile.rating = Math.round(avg * 10) / 10;
+      tempProfile.ratingCount = count;
+      await kv.set(`user:${tempUserId}`, tempProfile);
+    }
+
+    console.log(`Seeded tempUser ratings: ${count} total (avg ${Math.round(avg * 10) / 10})`);
+  } catch (error) {
+    console.error('Failed to seed tempUser ratings:', error);
+  }
+};
+
 // Initialize on startup
 initStorage();
 initMockData();
+seedTempUserRatings();
 
 // Helper: Get authenticated user
 const getAuthUser = async (authHeader: string | null) => {

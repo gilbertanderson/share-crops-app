@@ -102,7 +102,7 @@ export function Profile() {
           <CardContent className="p-6 space-y-4">
             <div className="flex items-start gap-4">
               <Avatar className="w-12 h-12">
-                <AvatarImage src={user?.profilePhotoUrl} />
+                <AvatarImage src={user?.profilePhotoUrl} alt={user?.name ? `${user.name}'s profile photo` : 'Profile photo'} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </AvatarFallback>
@@ -332,7 +332,7 @@ function EditProfileDialog({ user, onClose, onSuccess }: {
             <Label>Profile Photo</Label>
             <div className="flex items-center gap-4">
               <Avatar className="w-20 h-20">
-                <AvatarImage src={photoFile ? URL.createObjectURL(photoFile) : user?.profilePhotoUrl} />
+                <AvatarImage src={photoFile ? URL.createObjectURL(photoFile) : user?.profilePhotoUrl} alt={user?.name ? `${user.name}'s profile photo` : 'Profile photo'} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                   {name?.charAt(0)?.toUpperCase() || 'U'}
                 </AvatarFallback>

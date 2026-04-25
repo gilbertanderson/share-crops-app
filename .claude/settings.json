@@ -1,12 +1,26 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm ci)",
-      "Bash(npm run build)",
-      "Bash(npm run test:e2e)",
-      "Bash(npm run lint)",
+      "Bash(npm install *)",
       "Bash(npx tsc *)",
-      "Bash(node_modules/.bin/tsc --noEmit)"
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run *)",
+      "WebFetch(domain:www.almanac.com)",
+      "WebSearch",
+      "WebFetch(domain:www.farmersalmanac.com)",
+      "WebFetch(domain:eatbobos.com)",
+      "WebFetch(domain:snaped.fns.usda.gov)",
+      "Read(//Users/gilbertanderson/.claude/**)",
+      "Bash(python3 -m json.tool)",
+      "Read(//Users/gilbertanderson/Library/Application Support/Code/User/**)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,':',v\\) for k,v in d.items\\(\\) if any\\(x in k.lower\\(\\) for x in ['organize','import','fix','format','save','lint']\\)]\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.items\\(\\)}, indent=2\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('prettier',{}\\), indent=2\\)\\); print\\(list\\(d.get\\('devDependencies',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(git -C /Users/gilbertanderson/Development/dev/shareCropsApp status --short)",
+      "Bash(git -C /Users/gilbertanderson/Development/dev/shareCropsApp log --oneline -5)",
+      "Bash(git -C /Users/gilbertanderson/Development/dev/shareCropsApp show HEAD:src/utils/api.ts)",
+      "Bash(git -C /Users/gilbertanderson/Development/dev/shareCropsApp show HEAD:src/app/components/OAuthCallback.tsx)",
+      "Bash(git -C /Users/gilbertanderson/Development/dev/shareCropsApp show HEAD:src/app/components/ui/form.tsx)"
     ]
   }
 }

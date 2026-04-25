@@ -138,8 +138,8 @@ export function Auth({ onSuccess }: AuthProps) {
         <CardContent>
           {mode === 'reset' && resetSent ? (
             <div className="space-y-4 text-center">
-              <div className="bg-green-50 border border-green-200 rounded-md p-4 dark:bg-green-950/20 dark:border-green-800">
-                <p className="text-sm text-green-800 dark:text-green-300">
+              <div className="bg-success/10 border border-success rounded-md p-4">
+                <p className="text-sm text-success">
                   If an account exists for <strong>{email}</strong>, you'll receive a password reset link shortly. Check your inbox.
                 </p>
               </div>
@@ -234,8 +234,8 @@ export function Auth({ onSuccess }: AuthProps) {
             )}
 
             {error && (
-              <div className="bg-error/10 border border-error rounded-md p-3">
-                <p className="text-sm text-error">{error}</p>
+              <div role="alert" className="bg-error/10 border border-error rounded-md p-3">
+                <p id="auth-error" className="text-sm text-error">{error}</p>
               </div>
             )}
 

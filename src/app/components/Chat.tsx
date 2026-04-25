@@ -164,7 +164,7 @@ export function ChatThread() {
               </svg>
             </button>
             <Avatar className="w-10 h-10 shrink-0">
-              <AvatarImage src={otherUser?.profilePhotoUrl} />
+              <AvatarImage src={otherUser?.profilePhotoUrl} alt={otherUser?.name ? `${otherUser.name}'s profile photo` : 'User profile photo'} />
               <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                 {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
               </AvatarFallback>

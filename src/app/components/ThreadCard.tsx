@@ -28,12 +28,16 @@ export function ThreadCard({ thread, otherUserId, onClick }: ThreadCardProps) {
   return (
     <Card
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Message thread with ${otherUser?.name || 'user'}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
       className="cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <Avatar className="w-10 h-10 shrink-0">
-            <AvatarImage src={otherUser?.profilePhotoUrl} />
+            <AvatarImage src={otherUser?.profilePhotoUrl} alt={otherUser?.name ? `${otherUser.name}'s profile photo` : 'User profile photo'} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
               {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
             </AvatarFallback>

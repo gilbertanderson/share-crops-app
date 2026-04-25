@@ -1,4 +1,4 @@
-import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import type { User, Listing, Offer, Thread, Message, Rating, Community } from '../types';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-dd877831`;

@@ -104,9 +104,9 @@ export const secureRequest = async (
   const token = secureStorage.get('sharecrops_token');
   const csrfToken = getCsrfToken();
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> | undefined),
   };
 
   // Add CSRF token to non-GET requests

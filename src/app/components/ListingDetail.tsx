@@ -10,7 +10,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { TomatoRatingDisplay, TomatoRating } from './TomatoRating';
+import { TomatoRating, StarRatingDisplay } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import {
   AlertDialog,
@@ -197,7 +197,7 @@ export function ListingDetail() {
                 <div className="flex-1">
                   <p className="font-medium">{listing.seller.name}</p>
                   {listing.seller.ratingCount > 0 ? (
-                    <TomatoRatingDisplay
+                    <StarRatingDisplay
                       rating={listing.seller.rating}
                       count={listing.seller.ratingCount}
                     />

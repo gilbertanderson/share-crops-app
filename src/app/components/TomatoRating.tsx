@@ -99,7 +99,8 @@ export function TomatoRating({
   );
 }
 
-export function TomatoRatingDisplay({ rating, count }: { rating: number; count?: number }) {
+
+export function StarRatingDisplay({ rating, count }: { rating: number; count?: number }) {
   const roundedRating = Math.round(rating);
 
   return (
@@ -108,28 +109,34 @@ export function TomatoRatingDisplay({ rating, count }: { rating: number; count?:
         {[1, 2, 3, 4, 5].map((value) => (
           <svg
             key={value}
-            viewBox="0 0 24 24"
+            viewBox="0 0 48 48"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             className="w-4 h-4"
+            aria-hidden="true"
           >
-            <path
-              d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z"
+            {/* Tomato body */}
+            <circle
+              cx="24"
+              cy="28"
+              r="16"
               fill={value <= roundedRating ? 'var(--tomato-filled)' : 'var(--tomato-empty)'}
+              className="transition-colors duration-200"
             />
+            {/* Tomato stem/leaf */}
             <path
-              d="M12 6V3M10 4.5C10 4.5 10.5 5.5 12 5.5C13.5 5.5 14 4.5 14 4.5M9 3C9 3 9.5 4 10.5 4.5M15 3C15 3 14.5 4 13.5 4.5"
+              d="M24 12V8M20 10.5C20 10.5 21 12 24 12C27 12 28 10.5 28 10.5M18 8C18 8 19 10 22 11M30 8C30 8 29 10 26 11"
               stroke="#4a7c3f"
-              strokeWidth="1.5"
+              strokeWidth="2"
               strokeLinecap="round"
-              strokeLinejoin="round"
               opacity={value <= roundedRating ? 1 : 0.5}
             />
           </svg>
         ))}
       </div>
-      <span className="text-sm text-muted-foreground">
-        {rating.toFixed(1)} {count !== undefined && `(${count})`}
+      <span className="text-sm text-muted-foreground font-medium">
+        {roundedRating}
+        {count !== undefined && <span className="text-xs ml-1">({count})</span>}
       </span>
     </div>
   );

@@ -3,7 +3,7 @@ import { API } from '../../utils/api';
 import type { Listing, User } from '../../types';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { TomatoRatingDisplay } from './TomatoRating';
+import { StarRatingDisplay } from './TomatoRating';
 import { isProduceInSeason } from '../../utils/seasonalProduce';
 
 interface ListingCardProps {
@@ -102,7 +102,7 @@ export function ListingCard({ listing, onClick, mobileActive = false, rank = nul
         {seller ? (
           <div className="pt-1">
             {seller.ratingCount > 0 ? (
-              <TomatoRatingDisplay rating={seller.rating} count={seller.ratingCount} />
+              <StarRatingDisplay rating={seller.rating} count={seller.ratingCount} />
             ) : (
               <span className="text-xs text-muted-foreground">New seller</span>
             )}

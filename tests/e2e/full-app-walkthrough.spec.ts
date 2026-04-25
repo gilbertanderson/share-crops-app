@@ -1,8 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const EMAIL = 'tempUser@share-crops.com';
-const PASSWORD = 'tempUser1!';
+const EMAIL = process.env.E2E_TEST_EMAIL;
+const PASSWORD = process.env.E2E_TEST_PASSWORD;
 
+if (!EMAIL || !PASSWORD) {
+  throw new Error('Missing required environment variables: E2E_TEST_EMAIL and E2E_TEST_PASSWORD');
+}
 async function login(page: Page) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(EMAIL);
@@ -54,7 +57,7 @@ test.describe('Full App Walkthrough', () => {
       await listingButtons.first().click();
       await page.waitForURL(/\/listing\//, { timeout: 10000 });
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(1000);
+
 
       // 6. Verify listing detail page
       console.log('📖 Viewing listing details...');
@@ -66,7 +69,7 @@ test.describe('Full App Walkthrough', () => {
       await page.getByRole('button', { name: /home/i }).click();
       await page.waitForURL(/\/marketplace/, { timeout: 10000 });
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(1000);
+      await expect(page.getByRole('heading', { name: /marketplace/i })).toBeVisible();
     }
 
     // 8. Test search on marketplace
@@ -74,7 +77,7 @@ test.describe('Full App Walkthrough', () => {
     const searchBox = page.getByPlaceholder(/search/i);
     if (await searchBox.isVisible({ timeout: 2000 }).catch(() => false)) {
       await searchBox.fill('tomato');
-      await page.waitForTimeout(800);
+      await page.waitForLoadState('networkidle');
       console.log('✓ Search executed');
     }
 
@@ -90,14 +93,14 @@ test.describe('Full App Walkthrough', () => {
     await page.getByRole('button', { name: /^chat$/i }).click();
     await page.waitForURL(/\/messages/, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
+
 
     // 11. Navigate to Profile tab
     console.log('👤 Checking Profile tab...');
     await page.getByRole('button', { name: /^profile$/i }).click();
     await page.waitForURL(/\/profile/, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await expect(page.getByRole('heading', { name: /profile/i }).or(page.getByText(/ratings/i))).toBeVisible({ timeout: 5000 });
 
     // 12. Verify profile information visible
     console.log('✨ Verifying profile...');
@@ -108,14 +111,15 @@ test.describe('Full App Walkthrough', () => {
     await page.getByRole('button', { name: /home/i }).click();
     await page.waitForURL(/\/marketplace/, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
+    await expect(page.getByRole('heading', { name: /marketplace/i })).toBeVisible({ timeout: 10000 });
 
     // 14. Test scroll behavior on navigation
     console.log('⬆️ Testing scroll to top on page change...');
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => window.scrollY > 0);
     await page.getByRole('button', { name: /^offers$/i }).click();
-    await page.waitForTimeout(500);
+    await page.waitForURL(/\/offers/, { timeout: 10000 });
+    await page.waitForLoadState('networkidle');
     const scrollY = await page.evaluate(() => window.scrollY);
     console.log(`Scroll position after nav: ${scrollY}`);
 

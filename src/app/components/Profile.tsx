@@ -11,7 +11,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
-import { TomatoRatingDisplay } from './TomatoRating';
+import { StarRatingDisplay } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import {
   AlertDialog,
@@ -119,7 +119,7 @@ export function Profile() {
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
                 {user && user.ratingCount > 0 && (
                   <div className="mt-2">
-                    <TomatoRatingDisplay rating={user.rating} count={user.ratingCount} />
+                    <StarRatingDisplay rating={user.rating} count={user.ratingCount} />
                   </div>
                 )}
               </div>
@@ -259,7 +259,7 @@ export function Profile() {
               <Card key={rating.id}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
-                    <TomatoRatingDisplay rating={rating.rating} />
+                    <StarRatingDisplay rating={rating.rating} />
                     <span className="text-xs text-muted-foreground">
                       {new Date(rating.createdAt).toLocaleDateString()}
                     </span>

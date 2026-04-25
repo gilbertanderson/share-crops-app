@@ -9,6 +9,7 @@ import { Offers } from './components/Offers';
 import { ChatList, ChatThread } from './components/Chat';
 import { Profile } from './components/Profile';
 import { ResetPassword } from './components/ResetPassword';
+import OAuthCallback from './components/OAuthCallback';
 
 export default function App() {
   const { isAuthenticated, hasCompletedSetup, loading, refreshAuth, logout } = useAuth();
@@ -54,6 +55,7 @@ export default function App() {
         }
       />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/auth/callback" element={<OAuthCallback />} />
 
       {/* Authenticated but needs community setup */}
       <Route

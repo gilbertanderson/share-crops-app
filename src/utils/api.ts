@@ -153,6 +153,21 @@ export class API {
     return { success: true };
   }
 
+  // OAuth
+  static async signInWithOAuth(provider: 'google' | 'apple'): Promise<void> {
+    const { supabase } = await import('../../utils/supabase');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message || `${provider} sign-in failed`);
+    }
+  }
+
   // Communities
   static async createCommunity(name: string, zipCode: string): Promise<{ community: Community }> {
     return this.request('/communities', {

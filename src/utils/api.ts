@@ -155,7 +155,7 @@ export class API {
 
   // OAuth
   static async signInWithOAuth(provider: 'google' | 'apple'): Promise<void> {
-    const { supabase } = await import('../../utils/supabase');
+    const { supabase } = await import('./supabase');
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {

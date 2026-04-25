@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API, AuthManager } from '../../utils/api';
 import type { Listing } from '../../types';
+import { isProduceInSeason } from '../../utils/seasonalProduce';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -80,6 +81,7 @@ export function ListingDetail() {
   }
 
   const isOwnListing = currentUser?.id === listing.sellerId;
+  const inSeason = isProduceInSeason(listing.title, listing.description);
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,7 +115,17 @@ export function ListingDetail() {
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h1 className="text-2xl font-bold">{listing.title}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-bold">{listing.title}</h1>
+                {inSeason && (
+                  <span className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M17.293 3.293a1 1 0 011.414 1.414l-10 10a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l9.293-9.293z" />
+                    </svg>
+                    In Season
+                  </span>
+                )}
+              </div>
               {listing.quantity && (
                 <p className="text-lg text-muted-foreground mt-1">Quantity: {listing.quantity}</p>
               )}

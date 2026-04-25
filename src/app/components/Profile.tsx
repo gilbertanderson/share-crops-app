@@ -158,10 +158,10 @@ export function Profile() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {listings.slice(0, 6).map((listing) => (
                 <Card key={listing.id}>
-                  <div className="relative w-[398px] h-[398px] mx-auto bg-muted rounded-lg overflow-hidden">
+                  <div className="relative w-full aspect-square bg-muted rounded-t-lg overflow-hidden">
                     {listing.photos?.[0] ? (
                       <img
                         src={listing.photos[0]}

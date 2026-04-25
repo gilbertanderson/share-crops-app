@@ -122,7 +122,7 @@
       "0": {
         "hex": "#fffcf7",
         "rgb": "rgb(255, 252, 247)",
-        "name": "White",
+        "name": "Neutral 0",
         "usage": "Primary background, card backgrounds"
       },
       "50": {
@@ -261,9 +261,9 @@
     }
   },
   "wcag_compliance": {
-    "notes": "Palette designed for WCAG-friendly contrast pairings; verify component pairings in context",
-    "primary_on_cream": "Pass AA for large text in standard button usage",
-    "text_900_on_cream": "Pass AAA in primary body text usage",
-    "primary_on_50": "Use medium or bold text weights for best readability"
+    "notes": "Recommended WCAG-friendly pairings only; validate each foreground/background combination with a contrast checker for the final component, text size, and font weight",
+    "primary_on_cream": "Recommended for prominent UI text and buttons on cream backgrounds; validate contrast in the final component",
+    "text_900_on_cream": "Recommended default pairing for body text on cream backgrounds; validate contrast in the final component",
+    "primary_on_50": "Use medium or bold text weights for best readability, and validate contrast with a checker in context"
   }
 }

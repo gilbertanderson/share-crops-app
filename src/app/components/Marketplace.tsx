@@ -10,6 +10,7 @@ import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { TomatoLoader } from './ui/tomato-loader';
 import { ListingCard } from './ListingCard';
+import { isProduceInSeason } from '../../utils/seasonalProduce';
 
 function TrendingSection({ zipCode }: { zipCode: string }) {
   const { data, isLoading } = useQuery({
@@ -68,13 +69,15 @@ export function Marketplace() {
   const listings: Listing[] = listingsData?.listings ?? [];
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
-  const visibleListings = normalizedQuery
+  const filteredListings = normalizedQuery
     ? listings.filter(
         (l) =>
           l.title?.toLowerCase().includes(normalizedQuery) ||
           l.description?.toLowerCase().includes(normalizedQuery)
       )
     : listings;
+
+  const visibleListings = [...filteredListings];
 
   return (
     <div className="min-h-screen bg-background">

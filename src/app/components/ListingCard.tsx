@@ -28,9 +28,9 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
   return (
     <Card
       onClick={onClick}
-      className="w-full max-w-[398px] mx-auto cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
+      className="w-[398px] mx-auto cursor-pointer transition-shadow overflow-hidden hover:shadow-lg"
     >
-      <div className="relative aspect-square bg-muted">
+      <div className="relative w-[398px] h-[398px] bg-muted">
         {listing.photos?.[0] ? (
           <img
             src={listing.photos[0]}

@@ -1,21 +1,34 @@
-share-crops-app/
+# Build and dependency directories
 dist/
-test-results/
-.DS_Store
 node_modules/
+.vercel
+.netlify
+
+# Environment and secrets
 .env
 .env.local
 .env.*.local
 *.local
+.agents/
+skills-lock.json
 
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules
-node_modules
-.vercel
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-workspace
+*.sublime-project
 
-# Local Netlify folder
-.netlify
+# Test and coverage
+test-results/
+coverage/
+.nyc_output/
+
+# Misc
+share-crops-app/
+*.log
+*.pid

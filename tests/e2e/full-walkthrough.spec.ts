@@ -1,6 +1,7 @@
 import { test } from '@playwright/test';
 
 test('full app walkthrough - complete end-to-end flow', async ({ page }) => {
+  test.setTimeout(120000); // 2 minutes for full walkthrough
   // 1. Load app
   console.log('🔓 Step 1: Load app');
   await page.goto('/');

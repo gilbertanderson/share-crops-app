@@ -473,6 +473,18 @@ const getAuthUser = async (authHeader: string | null) => {
   }
 };
 
+const isUserAdmin = async (userId: string): Promise<boolean> => {
+  const user = await kv.get(`user:${userId}`);
+  return user && user.isAdmin === true;
+};
+
+const requireAdmin = async (authHeader: string | null): Promise<any | null> => {
+  const user = await getAuthUser(authHeader);
+  if (!user) return null;
+  const isAdmin = await isUserAdmin(user.id);
+  return isAdmin ? user : null;
+};
+
 const MAX_LISTING_EXPIRATION_DAYS = 30;
 
 const getCommunityMembershipKey = (userId: string, communityId: string) =>
@@ -988,6 +1000,38 @@ app.delete("/make-server-dd877831/communities/mine/:communityId", async (c) => {
   } catch (error) {
     console.error("Leave community error:", error);
     return c.json({ error: "Failed to leave community" }, 500);
+  }
+});
+
+app.get("/make-server-dd877831/communities/:communityId/members", async (c) => {
+  const communityId = c.req.param('communityId');
+
+  try {
+    // Get all member IDs for this community
+    const memberIds: string[] = [];
+    const keys = await kv.list({ prefix: 'community-member:' });
+
+    for await (const key of keys) {
+      const keyStr = key.name;
+      if (keyStr.startsWith(`community-member:${communityId}:`)) {
+        const userId = keyStr.replace(`community-member:${communityId}:`, '');
+        memberIds.push(userId);
+      }
+    }
+
+    // Fetch user profiles for each member
+    const members: User[] = [];
+    for (const userId of memberIds) {
+      const user = await kv.get(`user:${userId}`);
+      if (user) {
+        members.push(user as User);
+      }
+    }
+
+    return c.json({ members });
+  } catch (error) {
+    console.error("Get community members error:", error);
+    return c.json({ error: "Failed to get community members" }, 500);
   }
 });
 
@@ -1760,6 +1804,211 @@ app.get("/make-server-dd877831/profile/:userId", async (c) => {
   } catch (error) {
     console.error("Get profile error:", error);
     return c.json({ error: "Failed to get profile" }, 500);
+  }
+});
+
+// ===== ADMIN ROUTES =====
+
+app.post("/make-server-dd877831/admin/init", async (c) => {
+  try {
+    const { email, password, name } = await c.req.json();
+
+    const supabase = getServiceRoleClient();
+
+    // Create auth user
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+    if (authError) {
+      return c.json({ error: authError.message }, 400);
+    }
+
+    // Create user profile with admin flag
+    const adminUser = {
+      id: authUser.user.id,
+      email,
+      name,
+      rating: 5,
+      ratingCount: 0,
+      createdAt: new Date().toISOString(),
+      isAdmin: true,
+    };
+
+    await kv.set(`user:${authUser.user.id}`, adminUser);
+
+    return c.json({ success: true, user: adminUser });
+  } catch (error) {
+    console.error("Admin init error:", error);
+    return c.json({ error: "Failed to create admin account" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/admin/reset-data", async (c) => {
+  const user = await requireAdmin(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized - admin required" }, 403);
+
+  try {
+    const supabase = getServiceRoleClient();
+
+    // Get all auth users
+    const { data: authUsers, error } = await supabase.auth.admin.listUsers();
+    if (error) throw error;
+
+    // Delete all users except tempUser and admin
+    const usersToDelete = authUsers.users.filter(
+      (u: any) => u.email !== 'tempuser@share-crop.com' && u.id !== user.id
+    );
+
+    for (const delUser of usersToDelete) {
+      await supabase.auth.admin.deleteUser(delUser.id);
+      await kv.del(`user:${delUser.id}`);
+    }
+
+    // Remove all community memberships
+    const keys = await kv.list({ prefix: 'user:' });
+    for await (const key of keys) {
+      if (key.name.includes('community_member')) {
+        await kv.del(key.name);
+      }
+    }
+
+    // Reset community member counts
+    const communityKeys = await kv.list({ prefix: 'community:id:' });
+    for await (const key of communityKeys) {
+      const community = await kv.get(key.name);
+      if (community) {
+        // Check if tempUser is a member
+        const membershipKey = getCommunityMembershipKey('tempuser-id', community.id);
+        const isMember = await kv.get(membershipKey);
+
+        community.memberCount = isMember ? 1 : 0;
+        await kv.set(key.name, community);
+      }
+    }
+
+    return c.json({ success: true, message: "Data reset complete" });
+  } catch (error) {
+    console.error("Admin reset data error:", error);
+    return c.json({ error: "Failed to reset data" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/admin/set-admin/:userId", async (c) => {
+  const user = await requireAdmin(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized - admin required" }, 403);
+
+  try {
+    const userId = c.req.param('userId');
+    const targetUser = await kv.get(`user:${userId}`);
+
+    if (!targetUser) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    targetUser.isAdmin = true;
+    await kv.set(`user:${userId}`, targetUser);
+
+    return c.json({ success: true, user: targetUser });
+  } catch (error) {
+    console.error("Set admin error:", error);
+    return c.json({ error: "Failed to set admin role" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/admin/remove-admin/:userId", async (c) => {
+  const user = await requireAdmin(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized - admin required" }, 403);
+
+  try {
+    const userId = c.req.param('userId');
+
+    // Check if this is the last admin
+    const keys = await kv.list({ prefix: 'user:' });
+    let adminCount = 0;
+    for await (const key of keys) {
+      const u = await kv.get(key.name);
+      if (u && u.isAdmin) adminCount++;
+    }
+
+    if (adminCount <= 1) {
+      return c.json({ error: "Cannot remove last admin account" }, 400);
+    }
+
+    const targetUser = await kv.get(`user:${userId}`);
+    if (!targetUser) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    targetUser.isAdmin = false;
+    await kv.set(`user:${userId}`, targetUser);
+
+    return c.json({ success: true, user: targetUser });
+  } catch (error) {
+    console.error("Remove admin error:", error);
+    return c.json({ error: "Failed to remove admin role" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/admin/listings/:id", async (c) => {
+  const user = await requireAdmin(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized - admin required" }, 403);
+
+  try {
+    const listingId = c.req.param('id');
+    await kv.del(`listing:id:${listingId}`);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Admin delete listing error:", error);
+    return c.json({ error: "Failed to delete listing" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/admin/communities/:id", async (c) => {
+  const user = await requireAdmin(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized - admin required" }, 403);
+
+  try {
+    const communityId = c.req.param('id');
+    const community = await kv.get(`community:id:${communityId}`);
+    if (community) {
+      await kv.del(`community:${community.zipCode}:${community.name.toLowerCase()}`);
+      await kv.del(`community:id:${communityId}`);
+    }
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Admin delete community error:", error);
+    return c.json({ error: "Failed to delete community" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/admin/ratings/:id", async (c) => {
+  const user = await requireAdmin(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized - admin required" }, 403);
+
+  try {
+    const ratingId = c.req.param('id');
+    await kv.del(`rating:id:${ratingId}`);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Admin delete rating error:", error);
+    return c.json({ error: "Failed to delete rating" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/admin/chat/messages/:id", async (c) => {
+  const user = await requireAdmin(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized - admin required" }, 403);
+
+  try {
+    const messageId = c.req.param('id');
+    await kv.del(`message:id:${messageId}`);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Admin delete message error:", error);
+    return c.json({ error: "Failed to delete message" }, 500);
   }
 });
 

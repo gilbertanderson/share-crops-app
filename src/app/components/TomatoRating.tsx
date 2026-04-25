@@ -99,8 +99,49 @@ export function TomatoRating({
   );
 }
 
+function RottenTomatoIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-6 h-6"
+    >
+      {/* Rotten tomato body with wrinkled/damaged appearance */}
+      <circle cx="12" cy="14" r="8" fill="var(--tomato-rotten)" />
+      {/* Add some damage/wrinkles to show it's rotten */}
+      <path
+        d="M8 12c1 1 2 0.5 3 1M15 13c-1 0.5-2 1-2 2M10 16c1-0.5 2 0 3 1M14 11c0.5 1 1.5 0.5 2 1.5"
+        stroke="var(--tomato-rotten)"
+        strokeWidth="0.8"
+        opacity="0.6"
+      />
+      {/* Stem - green as before */}
+      <path
+        d="M12 6V3M10 4.5C10 4.5 10.5 5.5 12 5.5C13.5 5.5 14 4.5 14 4.5M9 3C9 3 9.5 4 10.5 4.5M15 3C15 3 14.5 4 13.5 4.5"
+        stroke="#4a7c3f"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function TomatoRatingDisplay({ rating, count }: { rating: number; count?: number }) {
   const roundedRating = Math.round(rating);
+  const isRotten = roundedRating === 1;
+
+  if (isRotten) {
+    return (
+      <div className="flex items-center gap-2">
+        <RottenTomatoIcon />
+        <span className="text-sm text-muted-foreground">
+          {rating.toFixed(1)} (Rotten) {count !== undefined && `(${count})`}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2">

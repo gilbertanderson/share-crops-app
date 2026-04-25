@@ -227,26 +227,13 @@ export function Profile() {
           ) : (
             <div className="space-y-2">
               {communities.map((community) => (
-                <Card key={community.id}>
-                  <CardContent className="p-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{community.name}</p>
-                      <p className="text-sm text-muted-foreground">ZIP {community.zipCode}</p>
-                      {activeCommunityId === community.id && (
-                        <p className="text-xs text-primary mt-1">Active community</p>
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setLeaveError(''); setConfirmLeaveId(community.id); }}
-                      disabled={leavingCommunityId === community.id}
-                      className="border-error text-error hover:bg-error/10"
-                    >
-                      {leavingCommunityId === community.id ? 'Leaving...' : 'Leave'}
-                    </Button>
-                  </CardContent>
-                </Card>
+                <CommunityCardWithMembers
+                  key={community.id}
+                  community={community}
+                  isActive={activeCommunityId === community.id}
+                  onLeaveClick={() => { setLeaveError(''); setConfirmLeaveId(community.id); }}
+                  isLeaving={leavingCommunityId === community.id}
+                />
               ))}
             </div>
           )}
@@ -308,6 +295,91 @@ export function Profile() {
         />
       )}
     </div>
+  );
+}
+
+function CommunityCardWithMembers({
+  community,
+  isActive,
+  onLeaveClick,
+  isLeaving,
+}: {
+  community: Community;
+  isActive: boolean;
+  onLeaveClick: () => void;
+  isLeaving: boolean;
+}) {
+  const { data: meData } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => API.getMe(),
+  });
+  const currentUser: User | null = meData?.user ?? null;
+
+  const { data: membersData } = useQuery({
+    queryKey: ['community-members', community.id],
+    queryFn: () => API.getCommunityMembers(community.id),
+  });
+  const allMembers: User[] = membersData?.members ?? [];
+
+  // Prepend current user to the list, removing duplicates
+  const displayMembers = currentUser
+    ? [
+        currentUser,
+        ...allMembers.filter((m) => m.id !== currentUser.id),
+      ]
+    : allMembers;
+
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="font-medium">{community.name}</p>
+            <p className="text-sm text-muted-foreground">ZIP {community.zipCode} · {community.memberCount} members</p>
+            {isActive && (
+              <p className="text-xs text-primary mt-1">Active community</p>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onLeaveClick}
+            disabled={isLeaving}
+            className="border-error text-error hover:bg-error/10"
+          >
+            {isLeaving ? 'Leaving...' : 'Leave'}
+          </Button>
+        </div>
+
+        {displayMembers.length > 0 && (
+          <div className="flex items-center gap-1">
+            {displayMembers.slice(0, 5).map((member, index) => (
+              <div
+                key={member.id}
+                className="relative"
+                style={{ marginLeft: index > 0 ? '-8px' : '0' }}
+                title={member.name}
+              >
+                <Avatar className="w-8 h-8 border-2 border-background">
+                  <AvatarImage
+                    src={member.profilePhotoUrl === 'rotten-tomato' ? undefined : member.profilePhotoUrl}
+                    alt={member.name}
+                  />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {member.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            ))}
+            {displayMembers.length > 5 && (
+              <div className="text-xs text-muted-foreground px-1">
+                +{displayMembers.length - 5} more
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

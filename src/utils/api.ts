@@ -223,6 +223,10 @@ export class API {
     });
   }
 
+  static async getCommunityMembers(communityId: string): Promise<{ members: User[] }> {
+    return this.request(`/communities/${communityId}/members`);
+  }
+
   // Listings
   static async createListing(data: {
     title: string;

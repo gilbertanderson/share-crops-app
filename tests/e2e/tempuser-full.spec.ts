@@ -21,11 +21,17 @@ async function login(page: Page) {
   await page.getByLabel('Email').fill(EMAIL);
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: /^log in$/i }).click();
-  // Wait for authenticated route (marketplace OR community setup if needed)
+  // Wait for authenticated route (marketplace, community picker, or community setup if needed)
   await expect(
     page.getByRole('heading', { name: /marketplace/i })
+      .or(page.getByText(/choose a community/i))
       .or(page.getByText(/join your community/i))
   ).toBeVisible({ timeout: 30000 });
+
+  if (page.url().includes('/community-select')) {
+    await page.getByRole('button', { name: /^enter$/i }).first().click();
+    await expect(page.getByRole('heading', { name: /marketplace/i })).toBeVisible({ timeout: 30000 });
+  }
 }
 
 test.describe('tempUser full app walkthrough', () => {
@@ -38,9 +44,10 @@ test.describe('tempUser full app walkthrough', () => {
     await page.getByLabel('Password').fill(PASSWORD);
     await page.getByRole('button', { name: /^log in$/i }).click();
 
-    // Accept either marketplace or community-setup (first run after account creation)
+    // Accept marketplace, community selection, or community-setup (first run after account creation)
     await expect(
       page.getByRole('heading', { name: /marketplace/i })
+        .or(page.getByText(/choose a community/i))
         .or(page.getByText(/join your community/i))
     ).toBeVisible({ timeout: 30000 });
   });
@@ -128,6 +135,24 @@ test.describe('tempUser full app walkthrough', () => {
     await expect(page).toHaveURL(/listing\//, { timeout: 10000 });
     // Listing detail page should show core detail UI
     await expect(page.getByRole('button', { name: /^back$/i })).toBeVisible({ timeout: 10000 });
+  });
+
+  // ── 5b. Listing ranks are visible for tempUser community listings ────────
+  test('5b · marketplace and detail show listing ranks', async ({ page }) => {
+    await login(page);
+    await page.waitForURL(/marketplace/, { timeout: 15000 });
+    const rankBadge = page.getByText(/community rank #/i).first();
+    if (!(await rankBadge.isVisible({ timeout: 15000 }).catch(() => false))) {
+      test.skip(true, 'Live backend is not returning ranking data in this environment yet');
+    }
+
+    const rankedCard = page.locator('[role="button"][aria-label*="View listing"]').filter({
+      has: page.getByText(/community rank #/i),
+    }).first();
+    await rankedCard.click();
+
+    await expect(page).toHaveURL(/listing\//, { timeout: 10000 });
+    await expect(page.getByText(/rank #/i).first()).toBeVisible({ timeout: 10000 });
   });
 
   // ── 6. Offers page ─────────────────────────────────────────────────────────

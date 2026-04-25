@@ -6,6 +6,7 @@ const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-dd87
 export class AuthManager {
   private static TOKEN_KEY = 'sharecrops_token';
   private static USER_KEY = 'sharecrops_user';
+  private static COMMUNITY_SELECTED_KEY = 'sharecrops_community_selected';
 
   static getToken(): string | null {
     return localStorage.getItem(this.TOKEN_KEY);
@@ -18,6 +19,7 @@ export class AuthManager {
   static clearToken() {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
+    sessionStorage.removeItem(this.COMMUNITY_SELECTED_KEY);
   }
 
   static getUser(): User | null {
@@ -31,6 +33,18 @@ export class AuthManager {
 
   static isAuthenticated(): boolean {
     return !!this.getToken();
+  }
+
+  static hasSelectedCommunityThisSession(): boolean {
+    return sessionStorage.getItem(this.COMMUNITY_SELECTED_KEY) === 'true';
+  }
+
+  static markCommunitySelected() {
+    sessionStorage.setItem(this.COMMUNITY_SELECTED_KEY, 'true');
+  }
+
+  static resetCommunitySelection() {
+    sessionStorage.removeItem(this.COMMUNITY_SELECTED_KEY);
   }
 }
 
@@ -111,6 +125,7 @@ export class API {
 
     if (data.accessToken) {
       AuthManager.setToken(data.accessToken);
+      AuthManager.resetCommunitySelection();
     }
 
     return data;
@@ -193,6 +208,13 @@ export class API {
 
   static async getMyCommunities(): Promise<{ communities: Community[]; activeCommunityId: string | null }> {
     return this.request('/communities/mine');
+  }
+
+  static async setActiveCommunity(communityId: string): Promise<{ community: Community }> {
+    return this.request('/communities/active', {
+      method: 'POST',
+      body: JSON.stringify({ communityId }),
+    });
   }
 
   static async leaveCommunity(communityId: string): Promise<{ success: boolean }> {
@@ -314,6 +336,10 @@ export class API {
   // Trending
   static async getTrendingByZip(zipCode: string): Promise<{ items: Array<{ listing: Listing; offerCount: number }> }> {
     return this.request(`/trending/zip/${encodeURIComponent(zipCode)}`);
+  }
+
+  static async getTrendingByCommunity(communityId: string): Promise<{ items: Array<{ listing: Listing; offerCount: number }> }> {
+    return this.request(`/trending/community/${encodeURIComponent(communityId)}`);
   }
 
   // Upload

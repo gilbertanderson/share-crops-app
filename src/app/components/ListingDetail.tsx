@@ -103,7 +103,9 @@ export function ListingDetail() {
 
   const isOwnListing = currentUser?.id === listing.sellerId;
   const inSeason = isProduceInSeason(listing.title, listing.description);
-  const rankedItems = (rankingData?.items ?? []).filter((item) => item.offerCount > 0);
+  const rankedItems = (rankingData?.items ?? []).filter(
+    (item) => item.offerCount > 0 && item.listing.communityId === listing.communityId
+  );
   const communityRank = rankedItems.findIndex((item) => item.listing.id === listing.id) + 1;
 
   return (

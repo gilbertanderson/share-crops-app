@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from './context/AuthContext';
 import { Auth } from './components/Auth';
-import { CommunitySetup } from './components/CommunitySetup';
+import { CommunitySetup, CommunitySelection } from './components/CommunitySetup';
 import { Marketplace } from './components/Marketplace';
 import { ListingDetail } from './components/ListingDetail';
 import { Offers } from './components/Offers';
@@ -12,9 +12,17 @@ import { ResetPassword } from './components/ResetPassword';
 import OAuthCallback from './components/OAuthCallback';
 import { TomatoLoader } from './components/ui/tomato-loader';
 import { useNotificationBadges } from './hooks/useNotificationBadges';
+import { AuthManager } from '../utils/api';
 
 export default function App() {
-  const { isAuthenticated, hasCompletedSetup, loading: authLoading, refreshAuth, logout } = useAuth();
+  const {
+    isAuthenticated,
+    hasCompletedSetup,
+    communityCount,
+    loading: authLoading,
+    refreshAuth,
+    logout,
+  } = useAuth();
   const [phase, setPhase] = useState<'loading' | 'completing' | 'ready'>('loading');
 
   useEffect(() => {
@@ -63,7 +71,7 @@ export default function App() {
         path="/login"
         element={
           isAuthenticated
-            ? <Navigate to="/marketplace" replace />
+            ? <Navigate to={getPostLoginPath(communityCount)} replace />
             : <Auth onSuccess={refreshAuth} />
         }
       />
@@ -77,13 +85,34 @@ export default function App() {
           !isAuthenticated
             ? <Navigate to="/login" replace />
             : hasCompletedSetup
-            ? <Navigate to="/marketplace" replace />
+            ? <Navigate to={getPostLoginPath(communityCount)} replace />
             : <CommunitySetup onComplete={refreshAuth} onLogout={logout} />
         }
       />
 
+      <Route
+        path="/community-select"
+        element={
+          !isAuthenticated
+            ? <Navigate to="/login" replace />
+            : !hasCompletedSetup
+            ? <Navigate to="/community-setup" replace />
+            : AuthManager.hasSelectedCommunityThisSession()
+            ? <Navigate to="/marketplace" replace />
+            : <CommunitySelection onComplete={refreshAuth} onLogout={logout} />
+        }
+      />
+
       {/* Authenticated + setup required — wrapped in layout with bottom nav */}
-      <Route element={<RequireAuth isAuthenticated={isAuthenticated} hasSetup={hasCompletedSetup} />}>
+      <Route
+        element={
+          <RequireAuth
+            isAuthenticated={isAuthenticated}
+            hasSetup={hasCompletedSetup}
+            hasChosenCommunity={AuthManager.hasSelectedCommunityThisSession()}
+          />
+        }
+      >
         <Route element={<AppLayout />}>
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/listing/:id" element={<ListingDetail />} />
@@ -102,6 +131,12 @@ export default function App() {
   );
 }
 
+function getPostLoginPath(communityCount: number) {
+  if (communityCount === 0) return '/community-setup';
+  if (!AuthManager.hasSelectedCommunityThisSession()) return '/community-select';
+  return '/marketplace';
+}
+
 function CatchAll() {
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   const query = new URLSearchParams(window.location.search);
@@ -112,9 +147,18 @@ function CatchAll() {
   return <Navigate to="/marketplace" replace />;
 }
 
-function RequireAuth({ isAuthenticated, hasSetup }: { isAuthenticated: boolean; hasSetup: boolean }) {
+function RequireAuth({
+  isAuthenticated,
+  hasSetup,
+  hasChosenCommunity,
+}: {
+  isAuthenticated: boolean;
+  hasSetup: boolean;
+  hasChosenCommunity: boolean;
+}) {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!hasSetup) return <Navigate to="/community-setup" replace />;
+  if (!hasChosenCommunity) return <Navigate to="/community-select" replace />;
   return <Outlet />;
 }
 
@@ -156,6 +200,11 @@ function AppLayout() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
             }
+            filledIcon={
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.25a.75.75 0 01.53.22l9 9a.75.75 0 01-1.06 1.06l-.72-.72V19.5A2.25 2.25 0 0117.5 21.75h-3.75A.75.75 0 0113 21v-4.5a.75.75 0 00-.75-.75h-.5a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H6.5A2.25 2.25 0 014.25 19.5v-7.69l-.72.72a.75.75 0 01-1.06-1.06l9-9a.75.75 0 01.53-.22z" />
+              </svg>
+            }
             label="Home"
             active={activeTab() === 'marketplace'}
             onClick={() => navigate('/marketplace')}
@@ -164,6 +213,11 @@ function AppLayout() {
             icon={
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            }
+            filledIcon={
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7.5 3A2.5 2.5 0 005 5.5v13A2.5 2.5 0 007.5 21h9a2.5 2.5 0 002.5-2.5v-9a1.5 1.5 0 00-.44-1.06l-4-4A1.5 1.5 0 0013.5 4h-6zm2.75 6.25a.75.75 0 010-1.5h2.5a.75.75 0 010 1.5h-2.5zm0 3.75a.75.75 0 010-1.5h5.5a.75.75 0 010 1.5h-5.5zm0 3.75a.75.75 0 010-1.5h5.5a.75.75 0 010 1.5h-5.5z" />
               </svg>
             }
             label="Offers"
@@ -177,6 +231,11 @@ function AppLayout() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             }
+            filledIcon={
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 3c-4.97 0-9 3.582-9 8 0 1.574.512 3.042 1.395 4.28L3 19l4.745-1.051A9.863 9.863 0 0012 19c4.97 0 9-3.582 9-8s-4.03-8-9-8zm-4 7.25a1 1 0 110 2 1 1 0 010-2zm4 0a1 1 0 110 2 1 1 0 010-2zm4 0a1 1 0 110 2 1 1 0 010-2z" />
+              </svg>
+            }
             label="Chat"
             active={activeTab() === 'messages'}
             showBadge={hasNewMessages}
@@ -186,6 +245,11 @@ function AppLayout() {
             icon={
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            }
+            filledIcon={
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm-7.5 8.25A6.75 6.75 0 0111.25 13.5h1.5A6.75 6.75 0 0119.5 20.25a.75.75 0 01-.75.75H5.25a.75.75 0 01-.75-.75z" />
               </svg>
             }
             label="Profile"
@@ -199,8 +263,9 @@ function AppLayout() {
   );
 }
 
-function NavButton({ icon, label, active, showBadge = false, onClick }: {
+function NavButton({ icon, filledIcon, label, active, showBadge = false, onClick }: {
   icon: React.ReactNode;
+  filledIcon: React.ReactNode;
   label: string;
   active: boolean;
   showBadge?: boolean;
@@ -211,12 +276,17 @@ function NavButton({ icon, label, active, showBadge = false, onClick }: {
       type="button"
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
-      className={`flex flex-col items-center gap-1 min-w-[64px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md ${
-        active ? 'text-primary' : 'text-muted-foreground'
+      className={`group flex flex-col items-center gap-1 min-w-[64px] rounded-md transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+        active ? 'text-primary' : 'text-muted-foreground hover:text-primary focus-visible:text-primary'
       }`}
     >
       <span className="relative inline-flex">
-        {icon}
+        <span className="block group-hover:hidden group-focus-visible:hidden">
+          {icon}
+        </span>
+        <span className="hidden group-hover:block group-focus-visible:block">
+          {filledIcon}
+        </span>
         {showBadge ? (
           <span
             className="absolute -top-1 -right-1 inline-flex items-center justify-center leading-none"

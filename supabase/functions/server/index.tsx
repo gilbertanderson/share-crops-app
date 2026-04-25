@@ -258,34 +258,13 @@ const initMockData = async () => {
 // Ensure tempUser has visible listing rankings seeded by another user.
 const seedTempUserRatings = async () => {
   try {
-    const supabase = getServiceRoleClient();
-    const targetEmail = 'tempUser@share-crops.com';
+    const targetEmails = ['tempUser@share-crops.com', 'userTemp@share-crops.com'];
     const raterEmail = 'gilbertjanderson@gmail.com';
-
-    let tempUserId: string | null = null;
-    let raterUserId: string | null = null;
-
-    // Find both users in Supabase Auth so seeded ratings reference real accounts when available.
-    for (let page = 1; page <= 10 && (!tempUserId || !raterUserId); page++) {
-      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
-      if (error) {
-        console.error('Failed to list auth users for tempUser rating seed:', error);
-        return;
-      }
-
-      const users = data?.users ?? [];
-      if (!users.length) break;
-
-      for (const authUser of users) {
-        const email = authUser.email?.toLowerCase();
-        if (!tempUserId && email === targetEmail.toLowerCase()) {
-          tempUserId = authUser.id;
-        }
-        if (!raterUserId && email === raterEmail.toLowerCase()) {
-          raterUserId = authUser.id;
-        }
-      }
-    }
+    const userIds = await findAuthUserIdsByEmails([...targetEmails, raterEmail]);
+    const tempUserId = targetEmails
+      .map((email) => userIds[email.toLowerCase()])
+      .find((id) => !!id) ?? null;
+    let raterUserId = userIds[raterEmail.toLowerCase()] ?? null;
 
     if (!tempUserId) {
       console.log('tempUser not found; skipping tempUser rating seed');
@@ -346,22 +325,13 @@ const seedTempUserRatings = async () => {
 // Seed offers on tempUser's listings so they appear in community rankings.
 const seedTempUserListingOffers = async () => {
   try {
-    const supabase = getServiceRoleClient();
-    const targetEmail = 'tempUser@share-crops.com';
+    const targetEmails = ['tempUser@share-crops.com', 'userTemp@share-crops.com'];
     const raterEmail = 'gilbertjanderson@gmail.com';
-
-    let tempUserId: string | null = null;
-    let raterUserId: string | null = null;
-
-    for (let page = 1; page <= 10 && (!tempUserId || !raterUserId); page++) {
-      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
-      if (error || !data?.users?.length) break;
-      for (const authUser of data.users) {
-        const email = authUser.email?.toLowerCase();
-        if (!tempUserId && email === targetEmail.toLowerCase()) tempUserId = authUser.id;
-        if (!raterUserId && email === raterEmail.toLowerCase()) raterUserId = authUser.id;
-      }
-    }
+    const userIds = await findAuthUserIdsByEmails([...targetEmails, raterEmail]);
+    const tempUserId = targetEmails
+      .map((email) => userIds[email.toLowerCase()])
+      .find((id) => !!id) ?? null;
+    let raterUserId = userIds[raterEmail.toLowerCase()] ?? null;
 
     if (!tempUserId) {
       console.log('tempUser not found; skipping listing offer seed');
@@ -539,6 +509,33 @@ const getMembershipCommunities = async (userId: string): Promise<any[]> => {
   }
 
   return communities;
+};
+
+const findAuthUserIdsByEmails = async (emails: string[]): Promise<Record<string, string | null>> => {
+  const targets = new Map(emails.map((email) => [email.toLowerCase(), null as string | null]));
+  const supabase = getServiceRoleClient();
+
+  for (let page = 1; page <= 10; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
+    if (error) {
+      console.error('Failed to list auth users for email lookup:', error);
+      break;
+    }
+
+    const users = data?.users ?? [];
+    if (!users.length) break;
+
+    for (const authUser of users) {
+      const email = authUser.email?.toLowerCase();
+      if (email && targets.has(email) && !targets.get(email)) {
+        targets.set(email, authUser.id);
+      }
+    }
+
+    if ([...targets.values()].every(Boolean)) break;
+  }
+
+  return Object.fromEntries(targets);
 };
 
 const isListingExpired = (listing: any): boolean => {
@@ -923,6 +920,35 @@ app.get("/make-server-dd877831/communities/mine", async (c) => {
   } catch (error) {
     console.error("Get my communities error:", error);
     return c.json({ error: "Failed to get communities" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/communities/active", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  try {
+    const { communityId } = await c.req.json();
+
+    if (!communityId) {
+      return c.json({ error: "Community ID is required" }, 400);
+    }
+
+    const membership = await kv.get(getCommunityMembershipKey(user.id, communityId));
+    if (!membership) {
+      return c.json({ error: "You are not a member of this community" }, 403);
+    }
+
+    const community = await kv.get(`community:id:${communityId}`);
+    if (!community) {
+      return c.json({ error: "Community not found" }, 404);
+    }
+
+    await kv.set(`user:${user.id}:community`, communityId);
+    return c.json({ success: true, community });
+  } catch (error) {
+    console.error("Set active community error:", error);
+    return c.json({ error: "Failed to set active community" }, 500);
   }
 });
 
@@ -1421,6 +1447,35 @@ app.get("/make-server-dd877831/trending/zip/:zipCode", async (c) => {
   } catch (error) {
     console.error("Trending by zip error:", error);
     return c.json({ error: "Failed to get trending items" }, 500);
+  }
+});
+
+app.get("/make-server-dd877831/trending/community/:communityId", async (c) => {
+  try {
+    const communityId = c.req.param('communityId');
+    const rawListings = await kv.getByPrefix(`listing:community:${communityId}:`);
+    const communityListings = Array.isArray(rawListings)
+      ? rawListings.filter(
+          (l: any) => l && typeof l === 'object' && l.status === 'active' && !isListingExpired(l)
+        )
+      : [];
+
+    const withCounts = await Promise.all(
+      communityListings.map(async (listing: any) => {
+        const offers = await kv.getByPrefix(`offer:listing:${listing.id}:`);
+        return { listing, offerCount: Array.isArray(offers) ? offers.length : 0 };
+      })
+    );
+
+    withCounts.sort((a: any, b: any) => {
+      if (b.offerCount !== a.offerCount) return b.offerCount - a.offerCount;
+      return new Date(b.listing.createdAt || 0).getTime() - new Date(a.listing.createdAt || 0).getTime();
+    });
+
+    return c.json({ items: withCounts });
+  } catch (error) {
+    console.error("Trending by community error:", error);
+    return c.json({ error: "Failed to get community rankings" }, 500);
   }
 });
 

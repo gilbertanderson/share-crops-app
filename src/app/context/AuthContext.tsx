@@ -6,6 +6,7 @@ const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 interface AuthState {
   isAuthenticated: boolean;
   hasCompletedSetup: boolean;
+  communityCount: number;
   loading: boolean;
 }
 
@@ -20,32 +21,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({
     isAuthenticated: false,
     hasCompletedSetup: false,
+    communityCount: 0,
     loading: true,
   });
 
   const refreshAuth = useCallback(async () => {
     const authenticated = AuthManager.isAuthenticated();
     if (!authenticated) {
-      setState({ isAuthenticated: false, hasCompletedSetup: false, loading: false });
+      setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, loading: false });
       return;
     }
     try {
       await API.getMe();
-      const communityData = await API.getMyCommunity();
+      const communitiesData = await API.getMyCommunities();
+      const communityCount = communitiesData.communities?.length ?? 0;
       setState({
         isAuthenticated: true,
-        hasCompletedSetup: !!communityData.community,
+        hasCompletedSetup: communityCount > 0,
+        communityCount,
         loading: false,
       });
     } catch {
       AuthManager.clearToken();
-      setState({ isAuthenticated: false, hasCompletedSetup: false, loading: false });
+      setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, loading: false });
     }
   }, []);
 
   const logout = useCallback(() => {
     AuthManager.clearToken();
-    setState({ isAuthenticated: false, hasCompletedSetup: false, loading: false });
+    setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, loading: false });
   }, []);
 
   // Inactivity auto-logout: reset timer on user activity; logout after 30 min idle

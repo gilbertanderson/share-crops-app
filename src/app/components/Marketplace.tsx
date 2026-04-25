@@ -13,14 +13,24 @@ import { ListingCard } from './ListingCard';
 import { isProduceInSeason } from '../../utils/seasonalProduce';
 import { useMobileScrollActive } from '../hooks/useMobileScrollActive';
 
-function TrendingSection({ zipCode }: { zipCode: string }) {
+function TrendingSection({
+  zipCode,
+  communityId,
+  communityName,
+}: {
+  zipCode: string;
+  communityId: string;
+  communityName: string;
+}) {
   const { data, isLoading } = useQuery({
     queryKey: ['trending', zipCode],
     queryFn: () => API.getTrendingByZip(zipCode),
     staleTime: 60_000,
   });
 
-  const items = data?.items ?? [];
+  const items = (data?.items ?? [])
+    .filter((item) => item.listing.communityId === communityId)
+    .slice(0, 5);
   const topItems = items.filter((i) => i.offerCount > 0);
 
   if (isLoading) return null;
@@ -32,7 +42,7 @@ function TrendingSection({ zipCode }: { zipCode: string }) {
         <svg className="w-4 h-4 text-primary shrink-0" fill="currentColor" viewBox="0 0 24 24">
           <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
         </svg>
-        <span className="text-sm font-semibold text-primary">Most requested in ZIP {zipCode}</span>
+        <span className="text-sm font-semibold text-primary">Most requested in {communityName}</span>
       </div>
       <ol className="space-y-1.5">
         {topItems.map((item, idx) => (
@@ -101,7 +111,7 @@ export function Marketplace() {
 
   const rankByListingId = new Map<string, number>();
   (rankingData?.items ?? [])
-    .filter((item) => item.offerCount > 0)
+    .filter((item) => item.offerCount > 0 && item.listing.communityId === community?.id)
     .forEach((item, index) => {
       rankByListingId.set(item.listing.id, index + 1);
     });
@@ -111,7 +121,14 @@ export function Marketplace() {
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Marketplace</h1>
+            <div>
+              <h1 className="text-2xl font-bold">Marketplace</h1>
+              {community ? (
+                <p className="text-sm text-muted-foreground">
+                  {community.name} · ZIP {community.zipCode}
+                </p>
+              ) : null}
+            </div>
             <Button
               onClick={() => setShowCreate(true)}
               size="sm"
@@ -132,7 +149,7 @@ export function Marketplace() {
                 onClick={() => setFilter('community')}
                 className={filter === 'community' ? 'bg-primary text-primary-foreground' : ''}
               >
-                My Community
+                {community.name}
               </Button>
               <Button
                 variant={filter === 'all' ? 'default' : 'outline'}
@@ -168,8 +185,12 @@ export function Marketplace() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {filter === 'all' && community?.zipCode && (
-          <TrendingSection zipCode={community.zipCode} />
+        {filter === 'all' && community?.id && (
+          <TrendingSection
+            zipCode={community.zipCode}
+            communityId={community.id}
+            communityName={community.name}
+          />
         )}
         {showListingsLoader ? (
           <TomatoLoader label="Loading..." className="py-12" />

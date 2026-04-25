@@ -1,4 +1,4 @@
-import React, { useId } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { cn } from './utils';
 
 type TomatoLoaderSize = 'sm' | 'md' | 'lg';
@@ -16,6 +16,11 @@ const sizeClasses: Record<TomatoLoaderSize, string> = {
   lg: 'w-20 h-20',
 };
 
+// SVG fill: y=44 (empty) → y=12 (full), height 0 → 32
+const FILL_TOP = 12;
+const FILL_BOTTOM = 44;
+const FILL_RANGE = FILL_BOTTOM - FILL_TOP; // 32
+
 export function TomatoLoader({
   label = 'Loading...',
   size = 'md',
@@ -23,6 +28,36 @@ export function TomatoLoader({
   labelClassName,
 }: TomatoLoaderProps) {
   const clipPathId = useId().replace(/:/g, '');
+  const fillRef = useRef<SVGRectElement>(null);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    // Respect reduced-motion preference — skip animation entirely
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const startTime = performance.now();
+    // Exponential approach: reaches ~63% at 1.5 s, ~86% at 3 s, plateaus near 90%.
+    // Mirrors perceived page load: fast initial response then slows waiting for data.
+    const TIME_CONSTANT = 1500; // ms
+    const MAX_PROGRESS = 0.9;
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = MAX_PROGRESS * (1 - Math.exp(-elapsed / TIME_CONSTANT));
+      const y = FILL_BOTTOM - progress * FILL_RANGE;
+      const height = progress * FILL_RANGE;
+
+      if (fillRef.current) {
+        fillRef.current.setAttribute('y', String(y));
+        fillRef.current.setAttribute('height', String(height));
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return (
     <div className={cn('text-center space-y-3', className)}>
@@ -38,15 +73,15 @@ export function TomatoLoader({
           </clipPath>
         </defs>
 
+        {/* Empty tomato background */}
         <circle cx="24" cy="28" r="16" fill="var(--tomato-empty)" />
 
-        <g className="tomato-loader-fill" clipPath={`url(#${clipPathId})`}>
-          <rect x="8" y="44" width="32" height="0" fill="var(--tomato-filled)">
-            <animate attributeName="y" values="44;12" dur="1.8s" repeatCount="indefinite" />
-            <animate attributeName="height" values="0;32" dur="1.8s" repeatCount="indefinite" />
-          </rect>
+        {/* JS-driven fill (animated) */}
+        <g clipPath={`url(#${clipPathId})`}>
+          <rect ref={fillRef} x="8" y={FILL_BOTTOM} width="32" height="0" fill="var(--tomato-filled)" />
         </g>
 
+        {/* Static full tomato shown under prefers-reduced-motion */}
         <circle className="tomato-loader-static-fill" cx="24" cy="28" r="16" fill="var(--tomato-filled)" />
 
         <path

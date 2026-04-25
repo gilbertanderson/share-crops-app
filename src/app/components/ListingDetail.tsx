@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API, AuthManager } from '../../utils/api';
+import type { Listing } from '../../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,6 +11,16 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { TomatoRatingDisplay, TomatoRating } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { TomatoLoader } from './ui/tomato-loader';
 
@@ -18,9 +31,12 @@ interface ListingDetailProps {
 }
 
 export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps) {
-  const [listing, setListing] = useState<any>(null);
+  const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [showOfferDialog, setShowOfferDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [offerSuccess, setOfferSuccess] = useState(false);
   const currentUser = AuthManager.getUser();
 
   useEffect(() => {
@@ -49,14 +65,13 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
   };
 
   const handleDeleteListing = async () => {
-    const confirmed = window.confirm('Delete this listing? This action cannot be undone.');
-    if (!confirmed) return;
-
+    setDeleteError('');
     try {
       await API.deleteListing(listingId);
+      setShowDeleteConfirm(false);
       onBack();
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete listing');
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete listing');
     }
   };
 
@@ -95,13 +110,13 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Photo Gallery */}
         {listing.photos && listing.photos.length > 0 && (
-          <div className="w-full max-w-[398px] mx-auto aspect-square rounded-xl overflow-hidden bg-muted">
+          <div className="w-[398px] h-[398px] mx-auto rounded-xl overflow-hidden bg-muted">
             <img
               src={listing.photos[0]}
               alt={listing.title}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           </div>
         )}
@@ -186,7 +201,7 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
         {isOwnListing && (
           <div className="sticky bottom-4">
             <Button
-              onClick={handleDeleteListing}
+              onClick={() => setShowDeleteConfirm(true)}
               variant="outline"
               className="w-full border-error text-error hover:bg-error/10"
             >
@@ -196,13 +211,52 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
         )}
       </div>
 
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this listing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+              {deleteError && (
+                <span className="block mt-2 text-error">{deleteError}</span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteListing}
+              className="bg-error text-error-foreground hover:bg-error/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={offerSuccess} onOpenChange={setOfferSuccess}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Offer submitted!</AlertDialogTitle>
+            <AlertDialogDescription>
+              The seller will be notified of your offer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setOfferSuccess(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {showOfferDialog && (
         <MakeOfferDialog
           listingId={listingId}
           onClose={() => setShowOfferDialog(false)}
           onSuccess={() => {
             setShowOfferDialog(false);
-            alert('Offer submitted! The seller will be notified.');
+            setOfferSuccess(true);
           }}
         />
       )}
@@ -228,8 +282,8 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: { listingId: string;
     try {
       await API.createOffer(listingId, offeredProduce, message);
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit offer');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit offer');
     } finally {
       setLoading(false);
     }
@@ -318,8 +372,8 @@ export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }:
     try {
       await API.createRating(offerId, rating, comment);
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit rating');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit rating');
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { API, AuthManager } from '../../utils/api';
+import type { User, Listing, Rating, Community } from '../../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,15 +9,27 @@ import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { TomatoRatingDisplay } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { TomatoLoader } from './ui/tomato-loader';
 
 export function Profile({ onLogout }: { onLogout: () => void }) {
-  const [user, setUser] = useState<any>(null);
-  const [listings, setListings] = useState<any[]>([]);
-  const [ratings, setRatings] = useState<any[]>([]);
-  const [communities, setCommunities] = useState<any[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [communities, setCommunities] = useState<Community[]>([]);
   const [activeCommunityId, setActiveCommunityId] = useState<string | null>(null);
   const [leavingCommunityId, setLeavingCommunityId] = useState<string | null>(null);
+  const [confirmLeaveId, setConfirmLeaveId] = useState<string | null>(null);
+  const [leaveError, setLeaveError] = useState('');
   const [loading, setLoading] = useState(true);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const currentUser = AuthManager.getUser();
@@ -47,16 +60,16 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  const handleLeaveCommunity = async (communityId: string) => {
-    const confirmed = window.confirm('Leave this community? You can rejoin later if it is still available.');
-    if (!confirmed) return;
-
-    setLeavingCommunityId(communityId);
+  const handleLeaveCommunity = async () => {
+    if (!confirmLeaveId) return;
+    setLeaveError('');
+    setLeavingCommunityId(confirmLeaveId);
     try {
-      await API.leaveCommunity(communityId);
+      await API.leaveCommunity(confirmLeaveId);
+      setConfirmLeaveId(null);
       await loadProfile();
-    } catch (err: any) {
-      alert(err.message || 'Failed to leave community');
+    } catch (err: unknown) {
+      setLeaveError(err instanceof Error ? err.message : 'Failed to leave community');
     } finally {
       setLeavingCommunityId(null);
     }
@@ -152,12 +165,13 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
             <div className="grid grid-cols-3 gap-2">
               {listings.slice(0, 6).map((listing) => (
                 <Card key={listing.id}>
-                  <div className="relative w-full max-w-[398px] mx-auto aspect-square bg-muted rounded-lg overflow-hidden">
+                  <div className="relative w-[398px] h-[398px] mx-auto bg-muted rounded-lg overflow-hidden">
                     {listing.photos?.[0] ? (
                       <img
                         src={listing.photos[0]}
                         alt={listing.title}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -201,7 +215,7 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleLeaveCommunity(community.id)}
+                      onClick={() => { setLeaveError(''); setConfirmLeaveId(community.id); }}
                       disabled={leavingCommunityId === community.id}
                       className="border-error text-error hover:bg-error/10"
                     >
@@ -237,6 +251,29 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
         )}
       </div>
 
+      <AlertDialog open={!!confirmLeaveId} onOpenChange={(open) => !open && setConfirmLeaveId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave this community?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can rejoin later if it is still available.
+              {leaveError && (
+                <span className="block mt-2 text-error">{leaveError}</span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLeaveCommunity}
+              className="bg-error text-error-foreground hover:bg-error/90"
+            >
+              Leave
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {showEditDialog && (
         <EditProfileDialog
           user={user}
@@ -251,7 +288,7 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-function EditProfileDialog({ user, onClose, onSuccess }: { user: any; onClose: () => void; onSuccess: () => void }) {
+function EditProfileDialog({ user, onClose, onSuccess }: { user: User | null; onClose: () => void; onSuccess: () => void }) {
   const [name, setName] = useState(user?.name || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [socialUrl, setSocialUrl] = useState(user?.socialUrl || '');
@@ -289,8 +326,8 @@ function EditProfileDialog({ user, onClose, onSuccess }: { user: any; onClose: (
       });
 
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setLoading(false);
     }

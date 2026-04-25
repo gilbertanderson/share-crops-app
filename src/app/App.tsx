@@ -1,140 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { AuthManager, API } from '../utils/api';
-import { initializeSecurity } from '../utils/security';
+import React from 'react';
+import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
+import { useAuth } from './context/AuthContext';
 import { Auth } from './components/Auth';
 import { CommunitySetup } from './components/CommunitySetup';
-import { Marketplace, CreateListing } from './components/Marketplace';
+import { Marketplace } from './components/Marketplace';
 import { ListingDetail } from './components/ListingDetail';
 import { Offers } from './components/Offers';
 import { ChatList, ChatThread } from './components/Chat';
 import { Profile } from './components/Profile';
 
-type Screen =
-  | { type: 'marketplace' }
-  | { type: 'listing-detail'; listingId: string }
-  | { type: 'offers' }
-  | { type: 'chat-list' }
-  | { type: 'chat-thread'; threadId: string }
-  | { type: 'profile' };
-
-type NavTab = 'marketplace' | 'offers' | 'chat' | 'profile';
-
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [hasCompletedSetup, setHasCompletedSetup] = useState(false);
-  const [activeTab, setActiveTab] = useState<NavTab>('marketplace');
-  const [screen, setScreen] = useState<Screen>({ type: 'marketplace' });
-  const [showCreateListing, setShowCreateListing] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Initialize security on app startup
-    initializeSecurity();
-  }, []);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const authenticated = AuthManager.isAuthenticated();
-    setIsAuthenticated(authenticated);
-
-    if (authenticated) {
-      try {
-        await API.getMe();
-        const communityData = await API.getMyCommunity();
-        setHasCompletedSetup(!!communityData.community);
-      } catch (err) {
-        setHasCompletedSetup(false);
-      }
-    }
-
-    setLoading(false);
-  };
-
-  const handleAuthSuccess = async () => {
-    await checkAuth();
-  };
-
-  const handleSetupComplete = () => {
-    setHasCompletedSetup(true);
-  };
-
-  const handleLogout = () => {
-    AuthManager.clearToken();
-    setIsAuthenticated(false);
-    setHasCompletedSetup(false);
-    setActiveTab('marketplace');
-    setScreen({ type: 'marketplace' });
-  };
-
-  const handleTabChange = (tab: NavTab) => {
-    setActiveTab(tab);
-    switch (tab) {
-      case 'marketplace':
-        setScreen({ type: 'marketplace' });
-        break;
-      case 'offers':
-        setScreen({ type: 'offers' });
-        break;
-      case 'chat':
-        setScreen({ type: 'chat-list' });
-        break;
-      case 'profile':
-        setScreen({ type: 'profile' });
-        break;
-    }
-  };
-
-  const handleViewListing = (listingId: string) => {
-    setScreen({ type: 'listing-detail', listingId });
-  };
-
-  const handleBackToMarketplace = () => {
-    setScreen({ type: 'marketplace' });
-  };
-
-  const handleOpenChat = (threadId: string) => {
-    setScreen({ type: 'chat-thread', threadId });
-  };
-
-  const handleBackToChats = () => {
-    setScreen({ type: 'chat-list' });
-  };
+  const { isAuthenticated, hasCompletedSetup, loading, refreshAuth, logout } = useAuth();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <svg
-            viewBox="0 0 48 48"
-            className="w-20 h-20 mx-auto"
-            fill="none"
-            aria-hidden="true"
-          >
+          <svg viewBox="0 0 48 48" className="w-20 h-20 mx-auto" fill="none" aria-hidden="true">
             <defs>
               <clipPath id="app-loading-tomato-clip">
                 <circle cx="24" cy="28" r="16" />
               </clipPath>
             </defs>
-
             <circle cx="24" cy="28" r="16" fill="var(--tomato-empty)" />
-
-            <g className="tomato-loader-fill" clipPath="url(#app-loading-tomato-clip)">
+            <g clipPath="url(#app-loading-tomato-clip)">
               <rect x="8" y="44" width="32" height="0" fill="var(--tomato-filled)">
                 <animate attributeName="y" values="44;12" dur="1.8s" repeatCount="indefinite" />
                 <animate attributeName="height" values="0;32" dur="1.8s" repeatCount="indefinite" />
               </rect>
             </g>
-
-            <circle className="tomato-loader-static-fill" cx="24" cy="28" r="16" fill="var(--tomato-filled)" />
-
+            <circle cx="24" cy="28" r="16" fill="var(--tomato-filled)" />
             <path
               d="M24 12V8M20 10.5C20 10.5 21 12 24 12C27 12 28 10.5 28 10.5M18 8C18 8 19 10 22 11M30 8C30 8 29 10 26 11"
-              stroke="#4a7c3f"
-              strokeWidth="2"
-              strokeLinecap="round"
+              stroke="#4a7c3f" strokeWidth="2" strokeLinecap="round"
             />
           </svg>
           <p className="text-muted-foreground">Loading Share Crops...</p>
@@ -143,50 +41,71 @@ export default function App() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Auth onSuccess={handleAuthSuccess} />;
-  }
+  return (
+    <Routes>
+      {/* Public */}
+      <Route
+        path="/login"
+        element={
+          isAuthenticated
+            ? <Navigate to="/marketplace" replace />
+            : <Auth onSuccess={refreshAuth} />
+        }
+      />
 
-  if (!hasCompletedSetup) {
-    return <CommunitySetup onComplete={handleSetupComplete} onLogout={handleLogout} />;
-  }
+      {/* Authenticated but needs community setup */}
+      <Route
+        path="/community-setup"
+        element={
+          !isAuthenticated
+            ? <Navigate to="/login" replace />
+            : hasCompletedSetup
+            ? <Navigate to="/marketplace" replace />
+            : <CommunitySetup onComplete={refreshAuth} onLogout={logout} />
+        }
+      />
+
+      {/* Authenticated + setup required — wrapped in layout with bottom nav */}
+      <Route element={<RequireAuth isAuthenticated={isAuthenticated} hasSetup={hasCompletedSetup} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/marketplace" element={<Marketplace />} />
+          <Route path="/listing/:id" element={<ListingDetail />} />
+          <Route path="/offers" element={<Offers />} />
+          <Route path="/messages" element={<ChatList />} />
+          <Route path="/messages/:threadId" element={<ChatThread />} />
+          <Route path="/profile" element={<Profile />} />
+        </Route>
+      </Route>
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/marketplace" replace />} />
+    </Routes>
+  );
+}
+
+function RequireAuth({ isAuthenticated, hasSetup }: { isAuthenticated: boolean; hasSetup: boolean }) {
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!hasSetup) return <Navigate to="/community-setup" replace />;
+  return <Outlet />;
+}
+
+type NavTab = 'marketplace' | 'offers' | 'messages' | 'profile';
+
+function AppLayout() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeTab = (): NavTab => {
+    if (location.pathname.startsWith('/offers')) return 'offers';
+    if (location.pathname.startsWith('/messages')) return 'messages';
+    if (location.pathname.startsWith('/profile')) return 'profile';
+    return 'marketplace';
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Main Content */}
-      <div className="min-h-[calc(100vh-5rem)]">
-        {screen.type === 'marketplace' && (
-          <Marketplace
-            onCreateListing={() => setShowCreateListing(true)}
-            onViewListing={handleViewListing}
-          />
-        )}
+      <Outlet />
 
-        {screen.type === 'listing-detail' && (
-          <ListingDetail
-            listingId={screen.listingId}
-            onBack={handleBackToMarketplace}
-            onChat={handleOpenChat}
-          />
-        )}
-
-        {screen.type === 'offers' && <Offers />}
-
-        {screen.type === 'chat-list' && (
-          <ChatList onSelectThread={handleOpenChat} />
-        )}
-
-        {screen.type === 'chat-thread' && (
-          <ChatThread
-            threadId={screen.threadId}
-            onBack={handleBackToChats}
-          />
-        )}
-
-        {screen.type === 'profile' && <Profile onLogout={handleLogout} />}
-      </div>
-
-      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-inset-bottom">
         <div className="flex items-center justify-around h-20 px-4">
           <NavButton
@@ -196,10 +115,9 @@ export default function App() {
               </svg>
             }
             label="Home"
-            active={activeTab === 'marketplace'}
-            onClick={() => handleTabChange('marketplace')}
+            active={activeTab() === 'marketplace'}
+            onClick={() => navigate('/marketplace')}
           />
-
           <NavButton
             icon={
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,10 +125,9 @@ export default function App() {
               </svg>
             }
             label="Offers"
-            active={activeTab === 'offers'}
-            onClick={() => handleTabChange('offers')}
+            active={activeTab() === 'offers'}
+            onClick={() => navigate('/offers')}
           />
-
           <NavButton
             icon={
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,10 +135,9 @@ export default function App() {
               </svg>
             }
             label="Chat"
-            active={activeTab === 'chat'}
-            onClick={() => handleTabChange('chat')}
+            active={activeTab() === 'messages'}
+            onClick={() => navigate('/messages')}
           />
-
           <NavButton
             icon={
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,33 +145,16 @@ export default function App() {
               </svg>
             }
             label="Profile"
-            active={activeTab === 'profile'}
-            onClick={() => handleTabChange('profile')}
+            active={activeTab() === 'profile'}
+            onClick={() => navigate('/profile')}
           />
         </div>
       </nav>
-
-      {/* Create Listing Dialog */}
-      {showCreateListing && (
-        <CreateListing
-          onClose={() => setShowCreateListing(false)}
-          onSuccess={() => {
-            setShowCreateListing(false);
-            setScreen({ type: 'marketplace' });
-            setActiveTab('marketplace');
-          }}
-        />
-      )}
     </div>
   );
 }
 
-function NavButton({
-  icon,
-  label,
-  active,
-  onClick,
-}: {
+function NavButton({ icon, label, active, onClick }: {
   icon: React.ReactNode;
   label: string;
   active: boolean;
@@ -263,6 +162,7 @@ function NavButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`flex flex-col items-center gap-1 min-w-[64px] transition-colors ${
         active ? 'text-primary' : 'text-muted-foreground'

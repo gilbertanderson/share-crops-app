@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API, AuthManager } from '../../utils/api';
+import type { Thread, Message, User } from '../../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { TomatoLoader } from './ui/tomato-loader';
+import { ThreadCard } from './ThreadCard';
 
 export function ChatList({ onSelectThread }: { onSelectThread: (threadId: string) => void }) {
-  const [threads, setThreads] = useState<any[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(true);
   const currentUser = AuthManager.getUser();
 
   useEffect(() => {
     loadThreads();
-    const interval = setInterval(loadThreads, 10000); // Poll every 10 seconds
+    const interval = setInterval(loadThreads, 10000);
     return () => clearInterval(interval);
   }, []);
 
@@ -28,8 +29,8 @@ export function ChatList({ onSelectThread }: { onSelectThread: (threadId: string
     }
   };
 
-  const getOtherUserId = (thread: any) => {
-    return thread.participants.find((id: string) => id !== currentUser?.id);
+  const getOtherUserId = (thread: Thread) => {
+    return thread.participants.find((id) => id !== currentUser?.id) ?? '';
   };
 
   return (
@@ -70,63 +71,19 @@ export function ChatList({ onSelectThread }: { onSelectThread: (threadId: string
   );
 }
 
-function ThreadCard({ thread, otherUserId, onClick }: { thread: any; otherUserId: string; onClick: () => void }) {
-  const [otherUser, setOtherUser] = useState<any>(null);
-
-  useEffect(() => {
-    loadUser();
-  }, [otherUserId]);
-
-  const loadUser = async () => {
-    try {
-      const data = await API.getProfile(otherUserId);
-      setOtherUser(data.profile);
-    } catch (err) {
-      console.error('Failed to load user', err);
-    }
-  };
-
-  return (
-    <Card
-      onClick={onClick}
-      className="cursor-pointer hover:shadow-md transition-shadow"
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <Avatar className="w-10 h-10 shrink-0">
-            <AvatarImage src={otherUser?.profilePhotoUrl} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">{otherUser?.name || 'Loading...'}</p>
-            <p className="text-sm text-muted-foreground truncate">
-              {thread.lastMessage || 'No messages yet'}
-            </p>
-          </div>
-          <span className="text-xs text-muted-foreground shrink-0">
-            {new Date(thread.lastMessageAt).toLocaleDateString()}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () => void }) {
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [thread, setThread] = useState<any>(null);
-  const [otherUser, setOtherUser] = useState<any>(null);
+  const [thread, setThread] = useState<Thread | null>(null);
+  const [otherUser, setOtherUser] = useState<User | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUser = AuthManager.getUser();
 
   useEffect(() => {
     loadMessages();
-    const interval = setInterval(loadMessages, 5000); // Poll every 5 seconds
+    const interval = setInterval(loadMessages, 5000);
     return () => clearInterval(interval);
   }, [threadId]);
 
@@ -139,13 +96,12 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
       const data = await API.getMessages(threadId);
       setMessages(data.messages || []);
 
-      // Load thread info for the first time
       if (!thread) {
         const threadData = await API.getThreads();
-        const foundThread = threadData.threads.find((t: any) => t.id === threadId);
+        const foundThread = threadData.threads.find((t) => t.id === threadId);
         if (foundThread) {
           setThread(foundThread);
-          const otherUserId = foundThread.participants.find((id: string) => id !== currentUser?.id);
+          const otherUserId = foundThread.participants.find((id) => id !== currentUser?.id);
           if (otherUserId) {
             const userData = await API.getProfile(otherUserId);
             setOtherUser(userData.profile);
@@ -176,7 +132,7 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
       await loadMessages();
     } catch (err) {
       console.error('Failed to send message', err);
-      setNewMessage(messageText); // Restore message on error
+      setNewMessage(messageText);
     } finally {
       setSending(false);
     }

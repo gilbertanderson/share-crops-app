@@ -45,154 +45,154 @@
   --elevation-4: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --elevation-5: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
 
-  /* Color Tokens - Produce-Inspired Palette */
-  --background: #FDFCF9;
-  --foreground: #2D2416;
+  /* Color Tokens - Forest Green + Earthy Cream Palette */
+  --background: #FFFCF7;
+  --foreground: #342C23;
 
-  /* Primary - Forest Green (main brand color) */
-  --primary: #2D6A2D;
-  --primary-hover: #1F511F;
+  /* Primary - Forest Green */
+  --primary: #2F5D3A;
+  --primary-hover: #264C30;
   --primary-foreground: #FFFFFF;
 
-  /* Secondary - Fresh Green (produce, growth) */
-  --secondary: #52B788;
-  --secondary-hover: #40916C;
+  /* Secondary - Deep Moss */
+  --secondary: #6F9F80;
+  --secondary-hover: #5F8D70;
   --secondary-foreground: #FFFFFF;
 
-  /* Accent - Warm Earth (community, trust) */
-  --accent: #F4A261;
-  --accent-hover: #E76F51;
-  --accent-foreground: #2D2416;
+  /* Accent - Earthy Ochre */
+  --accent: #CAA46F;
+  --accent-hover: #B18654;
+  --accent-foreground: #221D17;
 
-  /* Neutral Grays */
-  --muted: #F5F3F0;
-  --muted-foreground: #6B6456;
-  --border: #E0DCD5;
+  /* Neutral Creams */
+  --muted: #F9F4EA;
+  --muted-foreground: #6C5D49;
+  --border: #E4D8C2;
 
   /* Semantic Colors */
-  --success: #52B788;
+  --success: #3F7A4D;
   --success-foreground: #FFFFFF;
-  --warning: #F4A261;
-  --warning-foreground: #2D2416;
-  --error: #E63946;
+  --warning: #C0893A;
+  --warning-foreground: #221D17;
+  --error: #B6463A;
   --error-foreground: #FFFFFF;
-  --info: #457B9D;
+  --info: #4A6F7D;
   --info-foreground: #FFFFFF;
-  --destructive: #E63946;
+  --destructive: #B6463A;
   --destructive-foreground: #FFFFFF;
 
   /* Surface Colors */
-  --card: #FFFFFF;
-  --card-foreground: #2D2416;
-  --popover: #FFFFFF;
-  --popover-foreground: #2D2416;
+  --card: #FDF8EF;
+  --card-foreground: #342C23;
+  --popover: #FDF8EF;
+  --popover-foreground: #342C23;
 
   /* Input */
   --input: transparent;
-  --input-background: #F5F3F0;
-  --input-border: #D4CFC5;
-  --input-focus-ring: #2D6A2D;
-  --switch-background: #D4CFC5;
+  --input-background: #F2EADB;
+  --input-border: #D2C2A6;
+  --input-focus-ring: #2F5D3A;
+  --switch-background: #D2C2A6;
 
   /* Focus Ring */
-  --ring: #2D6A2D;
+  --ring: #2F5D3A;
 
   /* Tomato Rating Colors */
-  --tomato-empty: #E0DCD5;
+  --tomato-empty: #E4D8C2;
   --tomato-filled: #E63946;
   --tomato-hover: #FF4655;
 
   /* Community Badge Colors */
-  --badge-blue: #457B9D;
-  --badge-green: #52B788;
-  --badge-orange: #F4A261;
-  --badge-purple: #A663CC;
+  --badge-blue: #4A6F7D;
+  --badge-green: #3F7A4D;
+  --badge-orange: #C0893A;
+  --badge-purple: #7D6AA3;
 
   /* Charts */
-  --chart-1: #2D6A2D;
-  --chart-2: #52B788;
-  --chart-3: #F4A261;
-  --chart-4: #457B9D;
-  --chart-5: #A663CC;
+  --chart-1: #2F5D3A;
+  --chart-2: #6F9F80;
+  --chart-3: #CAA46F;
+  --chart-4: #4A6F7D;
+  --chart-5: #7D6AA3;
 
   /* Sidebar (for desktop) */
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #2D2416;
-  --sidebar-primary: #2D6A2D;
+  --sidebar: #FDF8EF;
+  --sidebar-foreground: #342C23;
+  --sidebar-primary: #2F5D3A;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F5F3F0;
-  --sidebar-accent-foreground: #2D2416;
-  --sidebar-border: #E0DCD5;
-  --sidebar-ring: #2D6A2D;
+  --sidebar-accent: #F2EADB;
+  --sidebar-accent-foreground: #342C23;
+  --sidebar-border: #E4D8C2;
+  --sidebar-ring: #2F5D3A;
 }
 
 .dark {
-  /* Share Crops Dark Theme - Warm Evening Palette */
-  --background: #1A1410;
-  --foreground: #F5F3F0;
+  /* Share Crops Dark Theme - Deep Forest at Dusk */
+  --background: #17140F;
+  --foreground: #F8F1E3;
 
-  /* Primary - Forest Green (slightly lightened for dark) */
-  --primary: #66BB6A;
-  --primary-hover: #81C784;
-  --primary-foreground: #1A1410;
+  /* Primary - Lightened Forest Green */
+  --primary: #7FAA86;
+  --primary-hover: #94BA9F;
+  --primary-foreground: #17140F;
 
-  /* Secondary - Fresh Green */
-  --secondary: #6BCF9F;
-  --secondary-hover: #85D9B3;
-  --secondary-foreground: #1A1410;
+  /* Secondary - Sage */
+  --secondary: #8CB29A;
+  --secondary-hover: #A4C4AF;
+  --secondary-foreground: #17140F;
 
-  /* Accent - Warm Earth */
-  --accent: #FFB380;
-  --accent-hover: #FFBD94;
-  --accent-foreground: #1A1410;
+  /* Accent - Warm Sand */
+  --accent: #D8BE90;
+  --accent-hover: #E4D2AE;
+  --accent-foreground: #17140F;
 
-  /* Neutral Grays */
-  --muted: #2D2416;
-  --muted-foreground: #B8AFA0;
-  --border: #3D3428;
+  /* Neutral Darks */
+  --muted: #2A241C;
+  --muted-foreground: #CBBCA4;
+  --border: #3A3227;
 
   /* Semantic Colors */
-  --success: #6BCF9F;
+  --success: #7FAA86;
   --success-foreground: #1A1410;
-  --warning: #FFB380;
+  --warning: #D8BE90;
   --warning-foreground: #1A1410;
-  --error: #FF6B77;
+  --error: #D16A5D;
   --error-foreground: #1A1410;
-  --info: #6B9DC7;
+  --info: #7EA2B0;
   --info-foreground: #1A1410;
-  --destructive: #FF6B77;
+  --destructive: #D16A5D;
   --destructive-foreground: #1A1410;
 
   /* Surface Colors */
-  --card: #24201A;
-  --card-foreground: #F5F3F0;
-  --popover: #24201A;
-  --popover-foreground: #F5F3F0;
+  --card: #211C15;
+  --card-foreground: #F8F1E3;
+  --popover: #211C15;
+  --popover-foreground: #F8F1E3;
 
   /* Input */
   --input: transparent;
-  --input-background: #2D2416;
-  --input-border: #3D3428;
-  --input-focus-ring: #66BB6A;
-  --switch-background: #3D3428;
+  --input-background: #2A241C;
+  --input-border: #3A3227;
+  --input-focus-ring: #7FAA86;
+  --switch-background: #3A3227;
 
   /* Focus Ring */
-  --ring: #66BB6A;
+  --ring: #7FAA86;
 
   /* Tomato Rating Colors */
-  --tomato-empty: #3D3428;
-  --tomato-filled: #FF6B77;
-  --tomato-hover: #FF8590;
+  --tomato-empty: #3A3227;
+  --tomato-filled: #D16A5D;
+  --tomato-hover: #DD7B70;
 
   /* Sidebar */
-  --sidebar: #24201A;
-  --sidebar-foreground: #F5F3F0;
-  --sidebar-primary: #66BB6A;
+  --sidebar: #211C15;
+  --sidebar-foreground: #F8F1E3;
+  --sidebar-primary: #7FAA86;
   --sidebar-primary-foreground: #1A1410;
-  --sidebar-accent: #2D2416;
-  --sidebar-accent-foreground: #F5F3F0;
-  --sidebar-border: #3D3428;
-  --sidebar-ring: #66BB6A;
+  --sidebar-accent: #2A241C;
+  --sidebar-accent-foreground: #F8F1E3;
+  --sidebar-border: #3A3227;
+  --sidebar-ring: #7FAA86;
 }
 
 @theme inline {

@@ -276,6 +276,11 @@ export class API {
     return this.request(`/profile/${userId}`);
   }
 
+  // Trending
+  static async getTrendingByZip(zipCode: string): Promise<{ items: Array<{ listing: Listing; offerCount: number }> }> {
+    return this.request(`/trending/zip/${encodeURIComponent(zipCode)}`);
+  }
+
   // Upload
   static async uploadPhoto(file: File): Promise<{ url: string }> {
     return this.uploadFile('/upload', file);

@@ -11,6 +11,42 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { TomatoLoader } from './ui/tomato-loader';
 import { ListingCard } from './ListingCard';
 
+function TrendingSection({ zipCode }: { zipCode: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['trending', zipCode],
+    queryFn: () => API.getTrendingByZip(zipCode),
+    staleTime: 60_000,
+  });
+
+  const items = data?.items ?? [];
+  const topItems = items.filter((i) => i.offerCount > 0);
+
+  if (isLoading) return null;
+  if (topItems.length === 0) return null;
+
+  return (
+    <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6">
+      <div className="flex items-center gap-2 mb-3">
+        <svg className="w-4 h-4 text-primary shrink-0" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
+        </svg>
+        <span className="text-sm font-semibold text-primary">Most requested in ZIP {zipCode}</span>
+      </div>
+      <ol className="space-y-1.5">
+        {topItems.map((item, idx) => (
+          <li key={item.listing.id} className="flex items-center gap-2">
+            <span className="text-xs font-bold text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
+            <span className="text-sm font-medium text-foreground truncate flex-1">{item.listing.title}</span>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {item.offerCount} {item.offerCount === 1 ? 'offer' : 'offers'}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 export function Marketplace() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'community'>('community');
@@ -102,6 +138,9 @@ export function Marketplace() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
+        {filter === 'all' && community?.zipCode && (
+          <TrendingSection zipCode={community.zipCode} />
+        )}
         {isLoading ? (
           <TomatoLoader label="Loading..." className="py-12" />
         ) : listings.length === 0 ? (

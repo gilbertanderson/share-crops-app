@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from './ui/alert-dialog';
 import { TomatoLoader } from './ui/tomato-loader';
+import { RottenTomato } from './ui/rotten-tomato';
 
 export function Profile() {
   const navigate = useNavigate();
@@ -33,6 +34,9 @@ export function Profile() {
   const [leavingCommunityId, setLeavingCommunityId] = useState<string | null>(null);
   const [leaveError, setLeaveError] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState('');
 
   const { data: meData, isLoading } = useQuery({
     queryKey: ['me'],
@@ -80,6 +84,20 @@ export function Profile() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    setDeleteAccountError('');
+    try {
+      await API.requestAccountDeletion();
+      alert('A confirmation email has been sent. Check your email to confirm account deletion.');
+      setShowDeleteAccountDialog(false);
+    } catch (err: unknown) {
+      setDeleteAccountError(err instanceof Error ? err.message : 'Failed to request account deletion');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -93,14 +111,24 @@ export function Profile() {
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Profile</h1>
-          <Button
-            onClick={logout}
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Log Out
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowDeleteAccountDialog(true)}
+              variant="ghost"
+              size="sm"
+              className="text-error hover:bg-error/10"
+            >
+              Delete Account
+            </Button>
+            <Button
+              onClick={logout}
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Log Out
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -108,12 +136,18 @@ export function Profile() {
         <Card>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-start gap-4">
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={user?.profilePhotoUrl} alt={user?.name ? `${user.name}'s profile photo` : 'Profile photo'} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
+              {user?.profilePhotoUrl === 'rotten-tomato' ? (
+                <div className="w-12 h-12">
+                  <RottenTomato size="md" />
+                </div>
+              ) : (
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={user?.profilePhotoUrl} alt={user?.name ? `${user.name}'s profile photo` : 'Profile photo'} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-bold">{user?.name}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
@@ -227,26 +261,13 @@ export function Profile() {
           ) : (
             <div className="space-y-2">
               {communities.map((community) => (
-                <Card key={community.id}>
-                  <CardContent className="p-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{community.name}</p>
-                      <p className="text-sm text-muted-foreground">ZIP {community.zipCode}</p>
-                      {activeCommunityId === community.id && (
-                        <p className="text-xs text-primary mt-1">Active community</p>
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setLeaveError(''); setConfirmLeaveId(community.id); }}
-                      disabled={leavingCommunityId === community.id}
-                      className="border-error text-error hover:bg-error/10"
-                    >
-                      {leavingCommunityId === community.id ? 'Leaving...' : 'Leave'}
-                    </Button>
-                  </CardContent>
-                </Card>
+                <CommunityCard
+                  key={community.id}
+                  community={community}
+                  isActive={activeCommunityId === community.id}
+                  isLeaving={leavingCommunityId === community.id}
+                  onLeaveClick={() => { setLeaveError(''); setConfirmLeaveId(community.id); }}
+                />
               ))}
             </div>
           )}
@@ -307,6 +328,30 @@ export function Profile() {
           }}
         />
       )}
+
+      <AlertDialog open={showDeleteAccountDialog} onOpenChange={(open) => !open && setShowDeleteAccountDialog(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete account permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All your listings will be deleted, but your communities, chats, and bids will remain. Check your email to confirm deletion.
+              {deleteAccountError && (
+                <span className="block mt-2 text-error">{deleteAccountError}</span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount}
+              className="bg-error text-error-foreground hover:bg-error/90"
+            >
+              {deletingAccount ? 'Deleting...' : 'Delete Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -445,5 +490,67 @@ function EditProfileDialog({ user, onClose, onSuccess }: {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function CommunityCard({
+  community,
+  isActive,
+  isLeaving,
+  onLeaveClick,
+}: {
+  community: Community;
+  isActive: boolean;
+  isLeaving: boolean;
+  onLeaveClick: () => void;
+}) {
+  const { data: membersData } = useQuery({
+    queryKey: ['community-members', community.id],
+    queryFn: () => API.getCommunityMembers(community.id),
+  });
+  const members = membersData?.members ?? [];
+  const displayedMembers = members.slice(0, 3);
+  const remainingCount = Math.max(0, members.length - 3);
+
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1">
+            <p className="font-medium">{community.name}</p>
+            <p className="text-sm text-muted-foreground">ZIP {community.zipCode} · {community.memberCount} {community.memberCount === 1 ? 'member' : 'members'}</p>
+            {isActive && (
+              <p className="text-xs text-primary mt-1">Active community</p>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onLeaveClick}
+            disabled={isLeaving}
+            className="border-error text-error hover:bg-error/10"
+          >
+            {isLeaving ? 'Leaving...' : 'Leave'}
+          </Button>
+        </div>
+        {members.length > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-2">
+              {displayedMembers.map((member) => (
+                <Avatar key={member.id} className="w-8 h-8 border-2 border-background">
+                  <AvatarImage src={member.profilePhotoUrl} alt={member.name} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {member.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            {remainingCount > 0 && (
+              <span className="text-xs text-muted-foreground ml-2">+{remainingCount} more</span>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

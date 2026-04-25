@@ -473,6 +473,18 @@ const getAuthUser = async (authHeader: string | null) => {
   }
 };
 
+const isUserAdmin = async (userId: string): Promise<boolean> => {
+  const user = await kv.get(`user:${userId}`);
+  return user?.isAdmin === true;
+};
+
+const requireAdmin = async (authHeader: string | null): Promise<any> => {
+  const user = await getAuthUser(authHeader);
+  if (!user) return null;
+  if (!(await isUserAdmin(user.id))) return null;
+  return user;
+};
+
 const MAX_LISTING_EXPIRATION_DAYS = 30;
 
 const getCommunityMembershipKey = (userId: string, communityId: string) =>
@@ -497,6 +509,23 @@ const getMembershipCommunityIds = async (userId: string): Promise<string[]> => {
   return [...new Set(ids)];
 };
 
+const getActualMemberCount = async (communityId: string): Promise<number> => {
+  try {
+    const memberships = await kv.getByPrefix(`user:`);
+    if (!Array.isArray(memberships)) return 1;
+    let count = 0;
+    for (const membership of memberships) {
+      if (membership && typeof membership === 'object' && membership.communityId === communityId) {
+        count++;
+      }
+    }
+    return Math.max(count, 1);
+  } catch (error) {
+    console.error('Error calculating member count:', error);
+    return 1;
+  }
+};
+
 const getMembershipCommunities = async (userId: string): Promise<any[]> => {
   const communityIds = await getMembershipCommunityIds(userId);
   const communities: any[] = [];
@@ -504,6 +533,7 @@ const getMembershipCommunities = async (userId: string): Promise<any[]> => {
   for (const id of communityIds) {
     const community = await kv.get(`community:id:${id}`);
     if (community) {
+      community.memberCount = await getActualMemberCount(id);
       communities.push(community);
     }
   }
@@ -776,6 +806,272 @@ app.get("/make-server-dd877831/auth/me", async (c) => {
   return c.json({ user: profile });
 });
 
+// ===== ADMIN ROUTES =====
+
+app.post("/make-server-dd877831/admin/init", async (c) => {
+  try {
+    const { email, password } = await c.req.json();
+
+    if (!email || !password) {
+      return c.json({ error: "Email and password are required" }, 400);
+    }
+
+    const supabase = getServiceRoleClient();
+
+    // Create the admin user in Supabase Auth
+    const { data, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+    if (authError || !data.user) {
+      return c.json({ error: authError?.message || "Failed to create admin user" }, 400);
+    }
+
+    // Create admin user profile in KV store
+    const adminProfile = {
+      id: data.user.id,
+      email,
+      name: "Admin",
+      rating: 5,
+      ratingCount: 0,
+      isAdmin: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    await kv.set(`user:${data.user.id}`, adminProfile);
+
+    return c.json({
+      success: true,
+      message: "Admin account created successfully",
+      userId: data.user.id,
+    });
+  } catch (error) {
+    console.error("Admin init error:", error);
+    return c.json({ error: "Failed to create admin account" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/admin/reset-data", async (c) => {
+  const adminUser = await requireAdmin(c.req.header('Authorization'));
+  if (!adminUser) return c.json({ error: "Unauthorized - Admin access required" }, 401);
+
+  try {
+    const supabase = getServiceRoleClient();
+
+    // Get all users except tempUser@share-crops.com
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+
+    if (listError) {
+      return c.json({ error: "Failed to list users" }, 500);
+    }
+
+    const tempUserEmail = "tempUser@share-crops.com";
+    let tempUserId: string | null = null;
+
+    // Delete all users except tempUser and admin
+    for (const user of users || []) {
+      if (user.email === tempUserEmail) {
+        tempUserId = user.id;
+      } else if (user.email !== adminUser.email) {
+        // Delete from Supabase Auth
+        await supabase.auth.admin.deleteUser(user.id);
+
+        // Delete from KV store
+        await kv.del(`user:${user.id}`);
+      }
+    }
+
+    // Remove all community memberships
+    const memberships = await kv.getByPrefix(`user:`);
+    if (Array.isArray(memberships)) {
+      for (const membership of memberships) {
+        if (membership?.communityId) {
+          await kv.del(
+            `user:${membership.userId}:community_member:${membership.communityId}`
+          );
+        }
+      }
+    }
+
+    // Reset community member counts
+    const communities = await kv.getByPrefix(`community:id:`);
+    if (Array.isArray(communities)) {
+      for (const community of communities) {
+        if (community) {
+          if (tempUserId) {
+            // Add tempUser back to community with count 1
+            community.memberCount = 1;
+            await kv.set(`community:id:${community.id}`, community);
+            await kv.set(`user:${tempUserId}:community_member:${community.id}`, {
+              userId: tempUserId,
+              communityId: community.id,
+              joinedAt: new Date().toISOString(),
+            });
+          } else {
+            community.memberCount = 0;
+            await kv.set(`community:id:${community.id}`, community);
+          }
+        }
+      }
+    }
+
+    return c.json({
+      success: true,
+      message: "Data reset complete",
+      tempUserRestored: !!tempUserId,
+    });
+  } catch (error) {
+    console.error("Data reset error:", error);
+    return c.json({ error: "Failed to reset data" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/admin/set-admin/:userId", async (c) => {
+  const adminUser = await requireAdmin(c.req.header('Authorization'));
+  if (!adminUser) return c.json({ error: "Unauthorized - Admin access required" }, 401);
+
+  try {
+    const userId = c.req.param('userId');
+    const user = await kv.get(`user:${userId}`);
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    user.isAdmin = true;
+    await kv.set(`user:${userId}`, user);
+
+    return c.json({ success: true, message: "User promoted to admin" });
+  } catch (error) {
+    console.error("Set admin error:", error);
+    return c.json({ error: "Failed to set admin status" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/admin/remove-admin/:userId", async (c) => {
+  const adminUser = await requireAdmin(c.req.header('Authorization'));
+  if (!adminUser) return c.json({ error: "Unauthorized - Admin access required" }, 401);
+
+  try {
+    const userId = c.req.param('userId');
+
+    // Prevent removing the last admin
+    const allUsers = await kv.getByPrefix(`user:`);
+    const adminCount = Array.isArray(allUsers)
+      ? allUsers.filter((u: any) => u?.isAdmin === true).length
+      : 0;
+
+    if (adminCount <= 1) {
+      return c.json({ error: "Cannot remove the last admin account" }, 400);
+    }
+
+    const user = await kv.get(`user:${userId}`);
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    user.isAdmin = false;
+    await kv.set(`user:${userId}`, user);
+
+    return c.json({ success: true, message: "Admin status removed" });
+  } catch (error) {
+    console.error("Remove admin error:", error);
+    return c.json({ error: "Failed to remove admin status" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/admin/listings/:id", async (c) => {
+  const adminUser = await requireAdmin(c.req.header('Authorization'));
+  if (!adminUser) return c.json({ error: "Unauthorized - Admin access required" }, 401);
+
+  try {
+    const id = c.req.param('id');
+    const listing = await kv.get(`listing:${id}`);
+
+    if (!listing) {
+      return c.json({ error: "Listing not found" }, 404);
+    }
+
+    await deleteListingRecords(listing);
+    return c.json({ success: true, message: "Listing deleted by admin" });
+  } catch (error) {
+    console.error("Admin delete listing error:", error);
+    return c.json({ error: "Failed to delete listing" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/admin/communities/:id", async (c) => {
+  const adminUser = await requireAdmin(c.req.header('Authorization'));
+  if (!adminUser) return c.json({ error: "Unauthorized - Admin access required" }, 401);
+
+  try {
+    const id = c.req.param('id');
+    const community = await kv.get(`community:id:${id}`);
+
+    if (!community) {
+      return c.json({ error: "Community not found" }, 404);
+    }
+
+    // Delete the community
+    await kv.del(`community:id:${id}`);
+    await kv.del(`community:${community.zipCode}:${community.name.toLowerCase().trim()}`);
+
+    return c.json({ success: true, message: "Community deleted by admin" });
+  } catch (error) {
+    console.error("Admin delete community error:", error);
+    return c.json({ error: "Failed to delete community" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/admin/ratings/:id", async (c) => {
+  const adminUser = await requireAdmin(c.req.header('Authorization'));
+  if (!adminUser) return c.json({ error: "Unauthorized - Admin access required" }, 401);
+
+  try {
+    const id = c.req.param('id');
+    const rating = await kv.get(`rating:${id}`);
+
+    if (!rating) {
+      return c.json({ error: "Rating not found" }, 404);
+    }
+
+    // Delete the rating
+    await kv.del(`rating:${id}`);
+    await kv.del(`rating:user:${rating.ratedUserId}:${id}`);
+    await kv.del(`rating:${rating.offerId}:${rating.raterUserId}`);
+
+    return c.json({ success: true, message: "Rating deleted by admin" });
+  } catch (error) {
+    console.error("Admin delete rating error:", error);
+    return c.json({ error: "Failed to delete rating" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/admin/chat/messages/:id", async (c) => {
+  const adminUser = await requireAdmin(c.req.header('Authorization'));
+  if (!adminUser) return c.json({ error: "Unauthorized - Admin access required" }, 401);
+
+  try {
+    const id = c.req.param('id');
+    const message = await kv.get(`message:${id}`);
+
+    if (!message) {
+      return c.json({ error: "Message not found" }, 404);
+    }
+
+    // Delete the message
+    await kv.del(`message:${id}`);
+    await kv.del(`thread:${message.threadId}:message:${id}`);
+
+    return c.json({ success: true, message: "Message deleted by admin" });
+  } catch (error) {
+    console.error("Admin delete message error:", error);
+    return c.json({ error: "Failed to delete message" }, 500);
+  }
+});
+
 // ===== COMMUNITY ROUTES =====
 
 app.post("/make-server-dd877831/communities", async (c) => {
@@ -988,6 +1284,40 @@ app.delete("/make-server-dd877831/communities/mine/:communityId", async (c) => {
   } catch (error) {
     console.error("Leave community error:", error);
     return c.json({ error: "Failed to leave community" }, 500);
+  }
+});
+
+app.get("/make-server-dd877831/communities/:communityId/members", async (c) => {
+  try {
+    const communityId = c.req.param('communityId');
+    const memberships = await kv.getByPrefix(`user:`);
+    if (!Array.isArray(memberships)) {
+      return c.json({ members: [] });
+    }
+
+    const memberIds = new Set<string>();
+    for (const membership of memberships) {
+      if (membership && typeof membership === 'object' && membership.communityId === communityId && membership.userId) {
+        memberIds.add(membership.userId);
+      }
+    }
+
+    const members = [];
+    for (const userId of memberIds) {
+      const user = await kv.get(`user:${userId}`);
+      if (user) {
+        members.push({
+          id: userId,
+          name: user.name,
+          profilePhotoUrl: user.profilePhotoUrl,
+        });
+      }
+    }
+
+    return c.json({ members });
+  } catch (error) {
+    console.error("Get community members error:", error);
+    return c.json({ error: "Failed to get community members" }, 500);
   }
 });
 
@@ -1760,6 +2090,92 @@ app.get("/make-server-dd877831/profile/:userId", async (c) => {
   } catch (error) {
     console.error("Get profile error:", error);
     return c.json({ error: "Failed to get profile" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/account/delete-request", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  try {
+    // Generate a deletion token that expires in 24 hours
+    const deletionToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    await kv.set(`deletion-token:${deletionToken}`, {
+      userId: user.id,
+      email: user.email,
+      expiresAt,
+      createdAt: new Date().toISOString(),
+    });
+
+    // In a production environment, you would send an email here
+    // For now, return the token for testing purposes
+    console.log(`Deletion token for ${user.email}: ${deletionToken}`);
+
+    return c.json({
+      success: true,
+      message: "Confirmation email sent. Check your email to confirm account deletion.",
+      deletionToken, // For testing - remove in production
+    });
+  } catch (error) {
+    console.error("Delete account request error:", error);
+    return c.json({ error: "Failed to process deletion request" }, 500);
+  }
+});
+
+app.post("/make-server-dd877831/account/delete-confirm/:token", async (c) => {
+  try {
+    const token = c.req.param('token');
+    const deletionData = await kv.get(`deletion-token:${token}`);
+
+    if (!deletionData) {
+      return c.json({ error: "Invalid or expired deletion token" }, 400);
+    }
+
+    const expiresAt = new Date(deletionData.expiresAt).getTime();
+    if (Date.now() > expiresAt) {
+      await kv.del(`deletion-token:${token}`);
+      return c.json({ error: "Deletion token has expired" }, 400);
+    }
+
+    const userId = deletionData.userId;
+
+    // Delete all listings created by this user
+    const listings = await kv.getByPrefix(`listing:`);
+    if (Array.isArray(listings)) {
+      for (const listing of listings) {
+        if (listing && listing.sellerId === userId) {
+          await deleteListingRecords(listing);
+        }
+      }
+    }
+
+    // Update user to "rotten tomato" status - anonymize account
+    const user = await kv.get(`user:${userId}`);
+    if (user) {
+      user.name = "rotten tomato";
+      user.profilePhotoUrl = "rotten-tomato"; // Special marker for rotten tomato icon
+      user.bio = "";
+      user.socialUrl = "";
+      user.email = `deleted-${userId}@deleted.local`;
+      await kv.set(`user:${userId}`, user);
+    }
+
+    // Delete the token after use
+    await kv.del(`deletion-token:${token}`);
+
+    // Delete the Supabase auth user
+    const supabase = getServiceRoleClient();
+    await supabase.auth.admin.deleteUser(userId);
+
+    return c.json({
+      success: true,
+      message: "Account successfully deleted. All your listings have been removed."
+    });
+  } catch (error) {
+    console.error("Delete account confirmation error:", error);
+    return c.json({ error: "Failed to delete account" }, 500);
   }
 });
 

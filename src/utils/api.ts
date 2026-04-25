@@ -223,6 +223,10 @@ export class API {
     });
   }
 
+  static async getCommunityMembers(communityId: string): Promise<{ members: Array<{ id: string; name: string; profilePhotoUrl?: string }> }> {
+    return this.request(`/communities/${communityId}/members`);
+  }
+
   // Listings
   static async createListing(data: {
     title: string;
@@ -337,6 +341,20 @@ export class API {
 
   static async getProfile(userId: string): Promise<{ profile: User }> {
     return this.request(`/profile/${userId}`);
+  }
+
+  static async requestAccountDeletion(): Promise<{ success: boolean; message: string; deletionToken?: string }> {
+    return this.request('/account/delete-request', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
+  static async confirmAccountDeletion(token: string): Promise<{ success: boolean; message: string }> {
+    return this.request(`/account/delete-confirm/${token}`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
   }
 
   // Trending

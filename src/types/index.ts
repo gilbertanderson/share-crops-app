@@ -8,6 +8,7 @@ export interface User {
   rating: number;
   ratingCount: number;
   createdAt: string;
+  isAdmin?: boolean;
 }
 
 export interface Community {

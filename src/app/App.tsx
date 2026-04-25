@@ -11,6 +11,7 @@ import { Profile } from './components/Profile';
 import { ResetPassword } from './components/ResetPassword';
 import OAuthCallback from './components/OAuthCallback';
 import { TomatoLoader } from './components/ui/tomato-loader';
+import { useNotificationBadges } from './hooks/useNotificationBadges';
 
 export default function App() {
   const { isAuthenticated, hasCompletedSetup, loading: authLoading, refreshAuth, logout } = useAuth();
@@ -131,6 +132,7 @@ function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isChatThread = location.pathname.startsWith('/messages/');
+  const { hasNewOffers, hasNewMessages } = useNotificationBadges();
 
   const activeTab = (): NavTab => {
     if (location.pathname.startsWith('/offers')) return 'offers';
@@ -166,6 +168,7 @@ function AppLayout() {
             }
             label="Offers"
             active={activeTab() === 'offers'}
+            showBadge={hasNewOffers}
             onClick={() => navigate('/offers')}
           />
           <NavButton
@@ -176,6 +179,7 @@ function AppLayout() {
             }
             label="Chat"
             active={activeTab() === 'messages'}
+            showBadge={hasNewMessages}
             onClick={() => navigate('/messages')}
           />
           <NavButton
@@ -195,10 +199,11 @@ function AppLayout() {
   );
 }
 
-function NavButton({ icon, label, active, onClick }: {
+function NavButton({ icon, label, active, showBadge = false, onClick }: {
   icon: React.ReactNode;
   label: string;
   active: boolean;
+  showBadge?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -210,7 +215,25 @@ function NavButton({ icon, label, active, onClick }: {
         active ? 'text-primary' : 'text-muted-foreground'
       }`}
     >
-      {icon}
+      <span className="relative inline-flex">
+        {icon}
+        {showBadge ? (
+          <span
+            className="absolute -top-1 -right-1 inline-flex items-center justify-center leading-none"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 48 48" className="block h-4 w-4" fill="none">
+              <circle cx="24" cy="28" r="16" fill="#E63946" />
+              <path
+                d="M24 12V8M20 10.5C20 10.5 21 12 24 12C27 12 28 10.5 28 10.5M18 8C18 8 19 10 22 11M30 8C30 8 29 10 26 11"
+                stroke="#4a7c3f"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+        ) : null}
+      </span>
       <span className="text-xs font-medium">{label}</span>
     </button>
   );

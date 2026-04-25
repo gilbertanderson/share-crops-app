@@ -57,6 +57,14 @@ export function ListingCard({ listing, onClick, mobileActive = false, rank = nul
             In Season
           </span>
         ) : null}
+        {rank ? (
+          <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-background/95 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
+            </svg>
+            #{rank}
+          </span>
+        ) : null}
         {listing.photos?.[0] ? (
           <img
             src={listing.photos[0]}

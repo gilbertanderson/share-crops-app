@@ -109,13 +109,30 @@ export default function App() {
         <div className="text-center space-y-4">
           <svg
             viewBox="0 0 48 48"
-            className="w-20 h-20 mx-auto text-primary animate-pulse"
-            fill="currentColor"
+            className="w-20 h-20 mx-auto"
+            fill="none"
+            aria-hidden="true"
           >
-            <circle cx="24" cy="28" r="16" />
+            <defs>
+              <clipPath id="app-loading-tomato-clip">
+                <circle cx="24" cy="28" r="16" />
+              </clipPath>
+            </defs>
+
+            <circle cx="24" cy="28" r="16" fill="var(--tomato-empty)" />
+
+            <g className="tomato-loader-fill" clipPath="url(#app-loading-tomato-clip)">
+              <rect x="8" y="44" width="32" height="0" fill="var(--tomato-filled)">
+                <animate attributeName="y" values="44;12" dur="1.8s" repeatCount="indefinite" />
+                <animate attributeName="height" values="0;32" dur="1.8s" repeatCount="indefinite" />
+              </rect>
+            </g>
+
+            <circle className="tomato-loader-static-fill" cx="24" cy="28" r="16" fill="var(--tomato-filled)" />
+
             <path
               d="M24 12V8M20 10.5C20 10.5 21 12 24 12C27 12 28 10.5 28 10.5M18 8C18 8 19 10 22 11M30 8C30 8 29 10 26 11"
-              stroke="currentColor"
+              stroke="#4a7c3f"
               strokeWidth="2"
               strokeLinecap="round"
             />

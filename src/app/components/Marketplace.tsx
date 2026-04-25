@@ -8,6 +8,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { TomatoRatingDisplay } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { TomatoLoader } from './ui/tomato-loader';
 
 interface ListingCardProps {
   listing: any;
@@ -32,7 +33,7 @@ function ListingCard({ listing, onClick }: ListingCardProps) {
   return (
     <Card
       onClick={onClick}
-      className="cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
+      className="w-full max-w-[398px] mx-auto cursor-pointer hover:shadow-lg transition-shadow overflow-hidden"
     >
       <div className="relative aspect-square bg-muted">
         {listing.photos?.[0] ? (
@@ -43,7 +44,7 @@ function ListingCard({ listing, onClick }: ListingCardProps) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <svg className="w-16 h-16 text-muted-foreground opacity-50" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 text-muted-foreground opacity-50" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z" />
             </svg>
           </div>
@@ -171,9 +172,7 @@ export function Marketplace({ onCreateListing, onViewListing }: { onCreateListin
 
       <div className="max-w-4xl mx-auto px-4 py-6">
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
+          <TomatoLoader label="Loading..." className="py-12" />
         ) : listings.length === 0 ? (
           <div className="text-center py-12 space-y-4">
             <svg className="w-16 h-16 mx-auto text-muted-foreground opacity-50" fill="currentColor" viewBox="0 0 24 24">

@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+import { TomatoLoader } from './ui/tomato-loader';
 
 export function ChatList({ onSelectThread }: { onSelectThread: (threadId: string) => void }) {
   const [threads, setThreads] = useState<any[]>([]);
@@ -41,9 +42,7 @@ export function ChatList({ onSelectThread }: { onSelectThread: (threadId: string
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
+          <TomatoLoader label="Loading..." className="py-12" />
         ) : threads.length === 0 ? (
           <div className="text-center py-12 space-y-2">
             <svg className="w-16 h-16 mx-auto text-muted-foreground opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,9 +93,9 @@ function ThreadCard({ thread, otherUserId, onClick }: { thread: any; otherUserId
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <Avatar className="w-12 h-12 shrink-0">
+          <Avatar className="w-10 h-10 shrink-0">
             <AvatarImage src={otherUser?.profilePhotoUrl} />
-            <AvatarFallback className="bg-primary text-primary-foreground">
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
               {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
@@ -190,15 +189,16 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
+              aria-label="Back"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <Avatar className="w-10 h-10">
+            <Avatar className="w-10 h-10 shrink-0">
               <AvatarImage src={otherUser?.profilePhotoUrl} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                 {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
@@ -212,9 +212,7 @@ export function ChatThread({ threadId, onBack }: { threadId: string; onBack: () 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-6">
           {loading ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Loading messages...</p>
-            </div>
+            <TomatoLoader label="Loading messages..." className="py-12" />
           ) : messages.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No messages yet. Say hello!</p>

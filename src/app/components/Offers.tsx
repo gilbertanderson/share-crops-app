@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { SubmitRatingDialog } from './ListingDetail';
+import { TomatoLoader } from './ui/tomato-loader';
 
 const STATUS_COLORS = {
   pending: 'bg-warning text-warning-foreground',
@@ -78,7 +79,7 @@ function OfferCard({ offer, viewAs, onAction }: OfferCardProps) {
     return (
       <Card>
         <CardContent className="p-4">
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <TomatoLoader label="Loading..." size="sm" className="py-1" labelClassName="text-sm" />
         </CardContent>
       </Card>
     );
@@ -224,9 +225,7 @@ export function Offers() {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
+          <TomatoLoader label="Loading..." className="py-12" />
         ) : offers.length === 0 ? (
           <div className="text-center py-12 space-y-2">
             <svg className="w-16 h-16 mx-auto text-muted-foreground opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">

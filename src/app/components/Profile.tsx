@@ -8,6 +8,7 @@ import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { TomatoRatingDisplay } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { TomatoLoader } from './ui/tomato-loader';
 
 export function Profile({ onLogout }: { onLogout: () => void }) {
   const [user, setUser] = useState<any>(null);
@@ -64,7 +65,7 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <TomatoLoader label="Loading..." />
       </div>
     );
   }
@@ -90,9 +91,9 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
         <Card>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-start gap-4">
-              <Avatar className="w-20 h-20">
+              <Avatar className="w-12 h-12">
                 <AvatarImage src={user?.profilePhotoUrl} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -148,19 +149,19 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {listings.slice(0, 4).map((listing) => (
+            <div className="grid grid-cols-3 gap-2">
+              {listings.slice(0, 6).map((listing) => (
                 <Card key={listing.id}>
-                  <div className="relative aspect-square bg-muted">
+                  <div className="relative w-full max-w-[398px] mx-auto aspect-square bg-muted rounded-lg overflow-hidden">
                     {listing.photos?.[0] ? (
                       <img
                         src={listing.photos[0]}
                         alt={listing.title}
-                        className="w-full h-full object-cover rounded-t-lg"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-12 h-12 text-muted-foreground opacity-50" fill="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-6 h-6 text-muted-foreground opacity-50" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z" />
                         </svg>
                       </div>

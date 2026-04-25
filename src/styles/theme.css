@@ -331,3 +331,17 @@
     line-height: 1.5;
   }
 }
+
+.tomato-loader-static-fill {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tomato-loader-fill {
+    display: none;
+  }
+
+  .tomato-loader-static-fill {
+    display: block;
+  }
+}

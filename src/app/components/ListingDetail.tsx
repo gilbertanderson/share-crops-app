@@ -9,6 +9,7 @@ import { Badge } from './ui/badge';
 import { TomatoRatingDisplay, TomatoRating } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
+import { TomatoLoader } from './ui/tomato-loader';
 
 interface ListingDetailProps {
   listingId: string;
@@ -62,7 +63,7 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <TomatoLoader label="Loading..." />
       </div>
     );
   }
@@ -96,11 +97,11 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Photo Gallery */}
         {listing.photos && listing.photos.length > 0 && (
-          <div className="rounded-xl overflow-hidden bg-muted">
+          <div className="w-full max-w-[398px] mx-auto aspect-square rounded-xl overflow-hidden bg-muted">
             <img
               src={listing.photos[0]}
               alt={listing.title}
-              className="w-full aspect-square object-cover"
+              className="w-full h-full object-cover"
             />
           </div>
         )}

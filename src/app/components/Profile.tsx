@@ -231,7 +231,7 @@ export function Profile() {
                   <CardContent className="p-4 flex items-center justify-between gap-3">
                     <div>
                       <p className="font-medium">{community.name}</p>
-                      <p className="text-sm text-muted-foreground">ZIP {community.zipCode}</p>
+                      <p className="text-sm text-muted-foreground">ZIP {community.zipCode} · {community.memberCount} {community.memberCount === 1 ? 'member' : 'members'}</p>
                       {activeCommunityId === community.id && (
                         <p className="text-xs text-primary mt-1">Active community</p>
                       )}

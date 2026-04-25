@@ -19,6 +19,7 @@ export function CommunitySetup({ onComplete, onLogout }: CommunitySetupProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchPerformed, setSearchPerformed] = useState(false);
+  const [joinedCommunityIds, setJoinedCommunityIds] = useState<Set<string>>(new Set());
 
   const searchCommunities = async () => {
     if (!zipCode || zipCode.length < 5) {
@@ -73,11 +74,17 @@ export function CommunitySetup({ onComplete, onLogout }: CommunitySetupProps) {
   };
 
   const joinCommunity = async (communityId: string) => {
+    // Prevent duplicate joins
+    if (joinedCommunityIds.has(communityId)) {
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
       await API.joinCommunity(communityId);
+      setJoinedCommunityIds(new Set(joinedCommunityIds).add(communityId));
       AuthManager.markCommunitySelected();
       onComplete();
     } catch (err: any) {
@@ -151,11 +158,11 @@ export function CommunitySetup({ onComplete, onLogout }: CommunitySetupProps) {
                       </div>
                       <Button
                         onClick={() => joinCommunity(community.id)}
-                        disabled={loading}
+                        disabled={loading || joinedCommunityIds.has(community.id)}
                         size="sm"
                         className="bg-secondary hover:bg-secondary-hover text-secondary-foreground"
                       >
-                        Join
+                        {joinedCommunityIds.has(community.id) ? 'Joined' : 'Join'}
                       </Button>
                     </div>
                   ))}
@@ -337,7 +344,7 @@ export function CommunitySelection({ onComplete, onLogout }: CommunitySelectionP
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{community.name}</p>
                       {activeCommunityId === community.id ? (
-                        <Badge variant="secondary" className="text-xs">Last active</Badge>
+                        <Badge className="text-xs bg-success text-success-foreground">Last active</Badge>
                       ) : null}
                     </div>
                     <p className="text-sm text-muted-foreground">

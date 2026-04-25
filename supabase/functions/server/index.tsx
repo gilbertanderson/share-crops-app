@@ -511,6 +511,27 @@ const getMembershipCommunities = async (userId: string): Promise<any[]> => {
   return communities;
 };
 
+const getActualMemberCount = async (communityId: string): Promise<number> => {
+  try {
+    const memberships = await kv.getByPrefix(`user:`);
+    if (!Array.isArray(memberships)) return 1;
+
+    let count = 0;
+    for (const membership of memberships) {
+      if (membership && typeof membership === 'object') {
+        // Check if this is a community membership record
+        if (membership.communityId === communityId) {
+          count++;
+        }
+      }
+    }
+    return Math.max(count, 1); // Minimum 1 member (creator)
+  } catch (error) {
+    console.error(`Failed to count members for community ${communityId}:`, error);
+    return 1;
+  }
+};
+
 const findAuthUserIdsByEmails = async (emails: string[]): Promise<Record<string, string | null>> => {
   const targets = new Map(emails.map((email) => [email.toLowerCase(), null as string | null]));
   const supabase = getServiceRoleClient();
@@ -849,8 +870,8 @@ app.post("/make-server-dd877831/communities/join", async (c) => {
     await kv.set(`user:${user.id}:community`, communityId);
     await addMembership(user.id, communityId);
 
-    // Increment member count
-    community.memberCount = (community.memberCount || 1) + 1;
+    // Calculate actual member count
+    community.memberCount = await getActualMemberCount(communityId);
     await kv.set(`community:id:${communityId}`, community);
     await kv.set(`community:${community.zipCode}:${community.name.toLowerCase().trim()}`, community);
 
@@ -869,6 +890,16 @@ app.get("/make-server-dd877831/communities/search", async (c) => {
     }
 
     const communities = await kv.getByPrefix(`community:${zipCode}:`);
+
+    // Calculate actual member counts
+    if (Array.isArray(communities)) {
+      for (const community of communities) {
+        if (community && community.id) {
+          community.memberCount = await getActualMemberCount(community.id);
+        }
+      }
+    }
+
     return c.json({ communities });
   } catch (error) {
     console.error("Search communities error:", error);
@@ -915,6 +946,14 @@ app.get("/make-server-dd877831/communities/mine", async (c) => {
 
   try {
     const communities = await getMembershipCommunities(user.id);
+
+    // Calculate actual member counts
+    for (const community of communities) {
+      if (community && community.id) {
+        community.memberCount = await getActualMemberCount(community.id);
+      }
+    }
+
     const activeCommunityId = await kv.get(`user:${user.id}:community`);
     return c.json({ communities, activeCommunityId });
   } catch (error) {

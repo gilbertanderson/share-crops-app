@@ -382,9 +382,21 @@ export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }:
   onSuccess: () => void;
 }) {
   const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const TOMATO_LABELS = [
+    { value: 1, label: 'Poor' },
+    { value: 2, label: 'Fair' },
+    { value: 3, label: 'Good' },
+    { value: 4, label: 'Very Good' },
+    { value: 5, label: 'Excellent' },
+  ];
+
+  const displayRating = hoverRating || rating;
+  const label = TOMATO_LABELS.find((l) => l.value === Math.floor(displayRating))?.label;
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -413,7 +425,55 @@ export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }:
         <div className="space-y-6">
           <div className="space-y-4">
             <Label className="text-center block">How was your experience?</Label>
-            <TomatoRating rating={rating} onChange={setRating} size="lg" showLabel={true} />
+            {/* Fixed-height container to prevent modal from resizing */}
+            <div className="h-32 flex flex-col items-center justify-center gap-2">
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setRating(value)}
+                    onMouseEnter={() => setHoverRating(value)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    className="w-10 h-10 transition-all duration-200 cursor-pointer hover:scale-110 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+                    aria-label={`${value} tomato${value > 1 ? 'es' : ''}`}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-full h-full"
+                    >
+                      <path
+                        d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z"
+                        fill={
+                          value <= displayRating
+                            ? 'var(--tomato-filled)'
+                            : 'var(--tomato-empty)'
+                        }
+                        className="transition-colors duration-200"
+                      />
+                      <path
+                        d="M12 6V3M10 4.5C10 4.5 10.5 5.5 12 5.5C13.5 5.5 14 4.5 14 4.5M9 3C9 3 9.5 4 10.5 4.5M15 3C15 3 14.5 4 13.5 4.5"
+                        stroke="#4a7c3f"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        opacity={value <= displayRating ? 1 : 0.5}
+                      />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+              {/* Fixed-height label space (always visible, content changes on hover) */}
+              <div className="h-6 flex items-center justify-center">
+                {label && (
+                  <span className="text-sm font-medium text-muted-foreground transition-opacity duration-150">
+                    {label}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -64,27 +64,28 @@ export function TomatoRating({
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className={`w-full h-full transition-colors duration-200 ${
-                  isFilled
-                    ? isHovering
-                      ? 'text-[var(--tomato-hover)]'
-                      : 'text-[var(--tomato-filled)]'
-                    : 'text-[var(--tomato-empty)]'
-                }`}
+                className="w-full h-full"
               >
                 {/* Tomato body */}
                 <path
                   d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z"
-                  fill="currentColor"
+                  fill={
+                    isFilled
+                      ? isHovering
+                        ? 'var(--tomato-hover)'
+                        : 'var(--tomato-filled)'
+                      : 'var(--tomato-empty)'
+                  }
+                  className="transition-colors duration-200"
                 />
                 {/* Tomato stem/leaf */}
                 <path
                   d="M12 6V3M10 4.5C10 4.5 10.5 5.5 12 5.5C13.5 5.5 14 4.5 14 4.5M9 3C9 3 9.5 4 10.5 4.5M15 3C15 3 14.5 4 13.5 4.5"
-                  stroke="currentColor"
+                  stroke="#4a7c3f"
                   strokeWidth="1.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className={isFilled ? 'opacity-80' : 'opacity-50'}
+                  opacity={isFilled ? 1 : 0.5}
                 />
               </svg>
             </button>
@@ -110,21 +111,19 @@ export function TomatoRatingDisplay({ rating, count }: { rating: number; count?:
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={`w-4 h-4 ${
-              value <= roundedRating ? 'text-[var(--tomato-filled)]' : 'text-[var(--tomato-empty)]'
-            }`}
+            className="w-4 h-4"
           >
             <path
               d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z"
-              fill="currentColor"
+              fill={value <= roundedRating ? 'var(--tomato-filled)' : 'var(--tomato-empty)'}
             />
             <path
               d="M12 6V3M10 4.5C10 4.5 10.5 5.5 12 5.5C13.5 5.5 14 4.5 14 4.5M9 3C9 3 9.5 4 10.5 4.5M15 3C15 3 14.5 4 13.5 4.5"
-              stroke="currentColor"
+              stroke="#4a7c3f"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="opacity-80"
+              opacity={value <= roundedRating ? 1 : 0.5}
             />
           </svg>
         ))}

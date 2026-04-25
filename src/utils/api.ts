@@ -110,6 +110,13 @@ export class API {
     return data;
   }
 
+  static async resetPassword(email: string) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
   // Communities
   static async createCommunity(name: string, zipCode: string) {
     return this.request('/communities', {

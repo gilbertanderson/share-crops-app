@@ -337,6 +337,34 @@ app.post("/make-server-dd877831/auth/login", async (c) => {
   }
 });
 
+app.post("/make-server-dd877831/auth/reset-password", async (c) => {
+  try {
+    const { email } = await c.req.json();
+
+    if (!email) {
+      return c.json({ error: "Email is required" }, 400);
+    }
+
+    const emailValidation = security.validateInput(email, 'email');
+    if (!emailValidation.valid) {
+      // Return success even on invalid email to avoid user enumeration
+      return c.json({ success: true });
+    }
+
+    const supabase = getAnonClient();
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${c.req.header('Origin') || 'https://sharecrops.app'}/reset-password`,
+    });
+
+    // Always return success to avoid leaking whether email exists
+    security.logSecurityEvent('password_reset_requested', 'low', { email: email.substring(0, 3) });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Password reset error:", error);
+    return c.json({ success: true }); // Still return success to avoid enumeration
+  }
+});
+
 app.get("/make-server-dd877831/auth/me", async (c) => {
   const user = await getAuthUser(c.req.header('Authorization'));
   if (!user) {

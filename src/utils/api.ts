@@ -265,6 +265,12 @@ export class API {
     });
   }
 
+  static async deleteOffer(offerId: string): Promise<{ success: boolean }> {
+    return this.request(`/offers/${offerId}`, {
+      method: 'DELETE',
+    });
+  }
+
   static async acceptOffer(offerId: string): Promise<{ offer: Offer }> {
     return this.request(`/offers/${offerId}/accept`, { method: 'POST' });
   }

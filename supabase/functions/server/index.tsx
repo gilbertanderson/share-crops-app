@@ -1271,6 +1271,17 @@ app.post("/make-server-dd877831/offers", async (c) => {
       return c.json({ error: "You cannot make an offer on your own listing" }, 400);
     }
 
+    // Check for duplicate offer: same listing + buyer + offered_produce
+    const buyerOffers = await kv.getByPrefix(`offer:buyer:${user.id}:`);
+    const duplicate = buyerOffers.find((offer: any) =>
+      offer.listingId === listingId &&
+      offer.offeredProduce === offeredProduce &&
+      offer.status !== 'declined' // Allow re-offering after declining
+    );
+    if (duplicate) {
+      return c.json({ error: "You already have an offer for this produce on this listing. Delete your existing offer to submit a new one." }, 400);
+    }
+
     const offerId = crypto.randomUUID();
     const offer = {
       id: offerId,
@@ -1389,6 +1400,35 @@ app.post("/make-server-dd877831/offers/:id/complete", async (c) => {
   } catch (error) {
     console.error("Complete offer error:", error);
     return c.json({ error: "Failed to complete offer" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/offers/:id", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  try {
+    const offerId = c.req.param('id');
+    const offer = await kv.get(`offer:${offerId}`);
+
+    if (!offer) {
+      return c.json({ error: "Offer not found" }, 404);
+    }
+
+    if (offer.buyerId !== user.id) {
+      return c.json({ error: "Only the buyer can delete their offer" }, 403);
+    }
+
+    // Delete from all KV store keys
+    await kv.delete(`offer:${offerId}`);
+    await kv.delete(`offer:listing:${offer.listingId}:${offerId}`);
+    await kv.delete(`offer:buyer:${offer.buyerId}:${offerId}`);
+    await kv.delete(`offer:seller:${offer.sellerId}:${offerId}`);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Delete offer error:", error);
+    return c.json({ error: "Failed to delete offer" }, 500);
   }
 });
 

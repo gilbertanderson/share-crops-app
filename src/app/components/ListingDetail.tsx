@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API, AuthManager } from '../../utils/api';
-import type { Listing } from '../../types';
+import type { Listing, Offer } from '../../types';
 import { isProduceInSeason } from '../../utils/seasonalProduce';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -301,7 +301,24 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: {
   const [offeredProduce, setOfferedProduce] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  const [existingOffers, setExistingOffers] = useState<Offer[]>([]);
+
+  React.useEffect(() => {
+    const loadExistingOffers = async () => {
+      try {
+        const result = await API.getMyOffers('buyer');
+        const offers = result.offers.filter(
+          (o) => o.listingId === listingId && o.status !== 'declined'
+        );
+        setExistingOffers(offers);
+      } catch (err) {
+        console.error('Failed to load existing offers', err);
+      }
+    };
+    loadExistingOffers();
+  }, [listingId]);
 
   const handleSubmit = async () => {
     if (!offeredProduce.trim()) {
@@ -320,6 +337,19 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: {
     }
   };
 
+  const handleDeleteOffer = async (offerId: string) => {
+    setDeleting(true);
+    try {
+      await API.deleteOffer(offerId);
+      setExistingOffers(existingOffers.filter(o => o.id !== offerId));
+      setError('');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to delete offer');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-md">
@@ -328,6 +358,35 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: {
         </DialogHeader>
 
         <div className="space-y-4">
+          {existingOffers.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <p className="text-sm font-medium text-amber-900 mb-3">Your existing offer(s):</p>
+              <div className="space-y-2">
+                {existingOffers.map(offer => (
+                  <div key={offer.id} className="flex items-start justify-between gap-2 p-2 bg-white rounded border border-amber-100">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{offer.offeredProduce}</p>
+                      {offer.message && (
+                        <p className="text-xs text-muted-foreground truncate">{offer.message}</p>
+                      )}
+                      <p className="text-xs text-amber-600 mt-1">Status: {offer.status}</p>
+                    </div>
+                    <Button
+                      onClick={() => handleDeleteOffer(offer.id)}
+                      variant="outline"
+                      size="sm"
+                      disabled={deleting}
+                      className="border-error text-error hover:bg-error/10 flex-shrink-0"
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-amber-700 mt-2">Delete your existing offer to submit a new one</p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="offeredProduce">What are you offering?*</Label>
             <Input
@@ -358,13 +417,13 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: {
           )}
 
           <div className="flex gap-2">
-            <Button onClick={onClose} variant="outline" className="flex-1" disabled={loading}>
+            <Button onClick={onClose} variant="outline" className="flex-1" disabled={loading || deleting}>
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
               className="flex-1 bg-primary hover:bg-primary-hover text-primary-foreground"
-              disabled={loading}
+              disabled={loading || deleting}
             >
               {loading ? 'Submitting...' : 'Submit Offer'}
             </Button>

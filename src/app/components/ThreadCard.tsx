@@ -28,7 +28,7 @@ export function ThreadCard({ thread, otherUserId, onClick }: ThreadCardProps) {
   return (
     <Card
       onClick={onClick}
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">

@@ -31,8 +31,8 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
     <Card
       onClick={onClick}
       className={[
-        'w-[398px] mx-auto cursor-pointer transition-shadow overflow-hidden',
-        inSeason ? 'in-season-card' : 'hover:shadow-lg',
+        'w-[398px] mx-auto cursor-pointer transition-all duration-200 overflow-hidden',
+        inSeason ? 'in-season-card' : 'hover:shadow-2xl hover:-translate-y-0.5',
       ].join(' ')}
     >
       <div className="relative w-[398px] h-[398px] bg-muted">

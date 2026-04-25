@@ -236,6 +236,65 @@ export const logSecurityEvent = (
 };
 
 /**
+ * Client-side login attempt tracker with lockout.
+ * Stored in sessionStorage (tab-scoped, cleared on browser close) to prevent
+ * permanent device lockout while still blocking rapid automated attacks.
+ *
+ * Mirrors the server-side rule: 5 failures → 5-minute lockout.
+ * The server enforces authoritatively; this provides immediate UI feedback
+ * and avoids unnecessary network requests during a lockout period.
+ */
+export class LoginAttemptTracker {
+  private static readonly KEY_PREFIX = 'sc_login_attempts:';
+  private static readonly MAX_ATTEMPTS = 5;
+  private static readonly WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+  private static readonly LOCKOUT_MS = 5 * 60 * 1000;  // 5 minute lockout
+
+  static record(email: string): void {
+    const key = this.KEY_PREFIX + email.toLowerCase();
+    const data = this.getData(email);
+    const now = Date.now();
+    data.attempts = data.attempts.filter((ts) => ts > now - this.WINDOW_MS);
+    data.attempts.push(now);
+    if (data.attempts.length >= this.MAX_ATTEMPTS) {
+      data.lockedUntil = now + this.LOCKOUT_MS;
+    }
+    try {
+      sessionStorage.setItem(key, JSON.stringify(data));
+    } catch {
+      // sessionStorage quota exceeded — ignore; server-side lockout still applies
+    }
+  }
+
+  static isLockedOut(email: string): boolean {
+    const data = this.getData(email);
+    return data.lockedUntil > Date.now();
+  }
+
+  static getRetryAfterSeconds(email: string): number {
+    const data = this.getData(email);
+    return Math.max(0, Math.ceil((data.lockedUntil - Date.now()) / 1000));
+  }
+
+  static clear(email: string): void {
+    try {
+      sessionStorage.removeItem(this.KEY_PREFIX + email.toLowerCase());
+    } catch {
+      // ignore
+    }
+  }
+
+  private static getData(email: string): { attempts: number[]; lockedUntil: number } {
+    try {
+      const raw = sessionStorage.getItem(this.KEY_PREFIX + email.toLowerCase());
+      return raw ? JSON.parse(raw) : { attempts: [], lockedUntil: 0 };
+    } catch {
+      return { attempts: [], lockedUntil: 0 };
+    }
+  }
+}
+
+/**
  * Content Security Policy violation handler
  */
 export const setupCspViolationReporting = (): void => {

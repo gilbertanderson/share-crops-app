@@ -402,6 +402,16 @@ app.get("/make-server-dd877831/health", (c) => {
 
 app.post("/make-server-dd877831/auth/signup", async (c) => {
   try {
+    // Body-size guard — reject before JSON parsing to prevent memory exhaustion
+    const contentLength = parseInt(c.req.header('content-length') || '0', 10);
+    if (contentLength > 4096) {
+      security.logSecurityEvent('oversized_auth_request', 'medium', {
+        ip: security.getClientIp(c.req),
+        size: contentLength,
+      });
+      return c.json({ error: 'Request too large' }, 413);
+    }
+
     const { email, password, name } = await c.req.json();
 
     // Input validation
@@ -477,7 +487,28 @@ app.post("/make-server-dd877831/auth/signup", async (c) => {
 
 app.post("/make-server-dd877831/auth/login", async (c) => {
   try {
+    // Body-size guard — reject before JSON parsing to prevent memory exhaustion
+    const contentLength = parseInt(c.req.header('content-length') || '0', 10);
+    if (contentLength > 4096) {
+      security.logSecurityEvent('oversized_auth_request', 'medium', {
+        ip: security.getClientIp(c.req),
+        size: contentLength,
+      });
+      return c.json({ error: 'Request too large' }, 413);
+    }
+
+    // Auth-specific rate limit (tighter than global 100/min)
+    const authLimit = security.authRateLimit(c.req);
+    if (!authLimit.allowed) {
+      c.header('Retry-After', Math.ceil((authLimit.resetTime - Date.now()) / 1000).toString());
+      security.logSecurityEvent('auth_rate_limit_exceeded', 'medium', {
+        ip: security.getClientIp(c.req),
+      });
+      return c.json({ error: 'Too many login attempts. Please try again later.' }, 429);
+    }
+
     const { email, password } = await c.req.json();
+    const ip = security.getClientIp(c.req);
 
     // Input validation
     if (!email || !password) {
@@ -487,23 +518,37 @@ app.post("/make-server-dd877831/auth/login", async (c) => {
     // Validate email format
     const emailValidation = security.validateInput(email, 'email');
     if (!emailValidation.valid) {
-      security.logSecurityEvent('invalid_login_email', 'low', { ip: security.getClientIp(c.req) });
+      security.logSecurityEvent('invalid_login_email', 'low', { ip });
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
-    // Rate limiting already applied via middleware, but we can add attempt tracking
+    // Per-email / per-IP lockout check
+    const lockout = security.isLockedOut(email, ip);
+    if (lockout.locked) {
+      c.header('Retry-After', lockout.retryAfter.toString());
+      security.logSecurityEvent('lockout_enforced', 'medium', {
+        ip,
+        email: email.substring(0, 3),
+      });
+      return c.json({ error: 'Account temporarily locked due to too many failed attempts. Please try again later.' }, 429);
+    }
+
     const supabase = getAnonClient();
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       console.error("Login error:", error);
+      security.trackFailedLogin(email, ip);
+      // Artificial delay: uniform response time prevents timing-based enumeration
+      await new Promise((resolve) => setTimeout(resolve, 500));
       security.logSecurityEvent('login_failed', 'low', {
-        ip: security.getClientIp(c.req),
+        ip,
         email: email.substring(0, 5),
       });
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
+    security.resetFailedLogin(email);
     security.logSecurityEvent('user_login', 'low', { userId: data.user.id });
     return c.json({
       success: true,

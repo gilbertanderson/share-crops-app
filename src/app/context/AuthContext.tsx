@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AuthManager, API } from '../../utils/api';
+
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -44,6 +46,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     AuthManager.clearToken();
     setState({ isAuthenticated: false, hasCompletedSetup: false, loading: false });
   }, []);
+
+  // Inactivity auto-logout: reset timer on user activity; logout after 30 min idle
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!state.isAuthenticated) return;
+
+    const resetTimer = () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+      inactivityTimer.current = setTimeout(() => {
+        logout();
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    const events = ['mousemove', 'keydown', 'touchstart', 'pointerdown', 'scroll'];
+    events.forEach((ev) => window.addEventListener(ev, resetTimer, { passive: true }));
+    resetTimer(); // start the initial timer
+
+    return () => {
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+      events.forEach((ev) => window.removeEventListener(ev, resetTimer));
+    };
+  }, [state.isAuthenticated, logout]);
 
   useEffect(() => {
     refreshAuth();

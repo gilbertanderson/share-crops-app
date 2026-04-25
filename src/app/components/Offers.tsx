@@ -10,6 +10,7 @@ import { TomatoLoader } from './ui/tomato-loader';
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -38,6 +39,8 @@ function OfferCard({ offer, viewAs, onAction }: {
 }) {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [ratingSuccess, setRatingSuccess] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: listingData } = useQuery({
     queryKey: ['listing', offer.listingId],
@@ -80,6 +83,19 @@ function OfferCard({ offer, viewAs, onAction }: {
     }
   };
 
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await API.deleteOffer(offer.id);
+      setShowDeleteConfirm(false);
+      onAction();
+    } catch (err) {
+      console.error('Failed to delete offer', err);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!listing) {
     return (
       <Card>
@@ -116,7 +132,7 @@ function OfferCard({ offer, viewAs, onAction }: {
             )}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {viewAs === 'seller' && offer.status === 'pending' && (
               <>
                 <Button
@@ -151,6 +167,17 @@ function OfferCard({ offer, viewAs, onAction }: {
                 Rate Exchange
               </Button>
             )}
+
+            {viewAs === 'buyer' && offer.status !== 'completed' && offer.status !== 'declined' && (
+              <Button
+                onClick={() => setShowDeleteConfirm(true)}
+                size="sm"
+                variant="outline"
+                className="border-error text-error hover:bg-error/10"
+              >
+                Delete
+              </Button>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">
@@ -182,6 +209,27 @@ function OfferCard({ offer, viewAs, onAction }: {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setRatingSuccess(false)}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this offer?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can submit a new offer after deleting this one.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-error text-error-foreground hover:bg-error/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

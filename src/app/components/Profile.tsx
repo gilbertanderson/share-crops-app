@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { API, AuthManager } from '../../utils/api';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { API } from '../../utils/api';
+import { useAuth } from '../context/AuthContext';
+import type { User, Listing, Rating, Community } from '../../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,61 +11,69 @@ import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { TomatoRatingDisplay } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { TomatoLoader } from './ui/tomato-loader';
 
-export function Profile({ onLogout }: { onLogout: () => void }) {
-  const [user, setUser] = useState<any>(null);
-  const [listings, setListings] = useState<any[]>([]);
-  const [ratings, setRatings] = useState<any[]>([]);
-  const [communities, setCommunities] = useState<any[]>([]);
-  const [activeCommunityId, setActiveCommunityId] = useState<string | null>(null);
+export function Profile() {
+  const { logout } = useAuth();
+  const queryClient = useQueryClient();
+  const [confirmLeaveId, setConfirmLeaveId] = useState<string | null>(null);
   const [leavingCommunityId, setLeavingCommunityId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [leaveError, setLeaveError] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const currentUser = AuthManager.getUser();
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  const { data: meData, isLoading } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => API.getMe(),
+  });
+  const user: User | null = meData?.user ?? null;
 
-  const loadProfile = async () => {
-    setLoading(true);
+  const { data: listingsData } = useQuery({
+    queryKey: ['my-listings', user?.id],
+    queryFn: () => API.getUserListings(user!.id),
+    enabled: !!user?.id,
+  });
+  const listings: Listing[] = listingsData?.listings ?? [];
+
+  const { data: ratingsData } = useQuery({
+    queryKey: ['my-ratings', user?.id],
+    queryFn: () => API.getUserRatings(user!.id),
+    enabled: !!user?.id,
+  });
+  const ratings: Rating[] = ratingsData?.ratings ?? [];
+
+  const { data: communitiesData } = useQuery({
+    queryKey: ['my-communities'],
+    queryFn: () => API.getMyCommunities(),
+  });
+  const communities: Community[] = communitiesData?.communities ?? [];
+  const activeCommunityId: string | null = communitiesData?.activeCommunityId ?? null;
+
+  const handleLeaveCommunity = async () => {
+    if (!confirmLeaveId) return;
+    setLeaveError('');
+    setLeavingCommunityId(confirmLeaveId);
     try {
-      const userData = await API.getMe();
-      setUser(userData.user);
-
-      const listingsData = await API.getUserListings(userData.user.id);
-      setListings(listingsData.listings || []);
-
-      const ratingsData = await API.getUserRatings(userData.user.id);
-      setRatings(ratingsData.ratings || []);
-
-      const communitiesData = await API.getMyCommunities();
-      setCommunities(communitiesData.communities || []);
-      setActiveCommunityId(communitiesData.activeCommunityId || null);
-    } catch (err) {
-      console.error('Failed to load profile', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLeaveCommunity = async (communityId: string) => {
-    const confirmed = window.confirm('Leave this community? You can rejoin later if it is still available.');
-    if (!confirmed) return;
-
-    setLeavingCommunityId(communityId);
-    try {
-      await API.leaveCommunity(communityId);
-      await loadProfile();
-    } catch (err: any) {
-      alert(err.message || 'Failed to leave community');
+      await API.leaveCommunity(confirmLeaveId);
+      setConfirmLeaveId(null);
+      queryClient.invalidateQueries({ queryKey: ['my-communities'] });
+    } catch (err: unknown) {
+      setLeaveError(err instanceof Error ? err.message : 'Failed to leave community');
     } finally {
       setLeavingCommunityId(null);
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <TomatoLoader label="Loading..." />
@@ -76,7 +87,7 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Profile</h1>
           <Button
-            onClick={onLogout}
+            onClick={logout}
             variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-foreground"
@@ -87,7 +98,6 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Profile Header */}
         <Card>
           <CardContent className="p-6 space-y-4">
             <div className="flex items-start gap-4">
@@ -100,7 +110,7 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-bold">{user?.name}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
-                {user?.ratingCount > 0 && (
+                {user && user.ratingCount > 0 && (
                   <div className="mt-2">
                     <TomatoRatingDisplay rating={user.rating} count={user.ratingCount} />
                   </div>
@@ -139,7 +149,6 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
           </CardContent>
         </Card>
 
-        {/* My Listings */}
         <div className="space-y-3">
           <h3 className="font-semibold">My Listings</h3>
           {listings.length === 0 ? (
@@ -152,12 +161,13 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
             <div className="grid grid-cols-3 gap-2">
               {listings.slice(0, 6).map((listing) => (
                 <Card key={listing.id}>
-                  <div className="relative w-full max-w-[398px] mx-auto aspect-square bg-muted rounded-lg overflow-hidden">
+                  <div className="relative w-[398px] h-[398px] mx-auto bg-muted rounded-lg overflow-hidden">
                     {listing.photos?.[0] ? (
                       <img
                         src={listing.photos[0]}
                         alt={listing.title}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -177,7 +187,6 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
 
-        {/* My Communities */}
         <div className="space-y-3">
           <h3 className="font-semibold">My Communities</h3>
           {communities.length === 0 ? (
@@ -201,7 +210,7 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleLeaveCommunity(community.id)}
+                      onClick={() => { setLeaveError(''); setConfirmLeaveId(community.id); }}
                       disabled={leavingCommunityId === community.id}
                       className="border-error text-error hover:bg-error/10"
                     >
@@ -214,7 +223,6 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
           )}
         </div>
 
-        {/* Ratings Received */}
         {ratings.length > 0 && (
           <div className="space-y-3">
             <h3 className="font-semibold">Recent Reviews</h3>
@@ -237,13 +245,36 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
         )}
       </div>
 
+      <AlertDialog open={!!confirmLeaveId} onOpenChange={(open) => !open && setConfirmLeaveId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave this community?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can rejoin later if it is still available.
+              {leaveError && (
+                <span className="block mt-2 text-error">{leaveError}</span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLeaveCommunity}
+              className="bg-error text-error-foreground hover:bg-error/90"
+            >
+              Leave
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {showEditDialog && (
         <EditProfileDialog
           user={user}
           onClose={() => setShowEditDialog(false)}
           onSuccess={() => {
             setShowEditDialog(false);
-            loadProfile();
+            queryClient.invalidateQueries({ queryKey: ['me'] });
           }}
         />
       )}
@@ -251,7 +282,11 @@ export function Profile({ onLogout }: { onLogout: () => void }) {
   );
 }
 
-function EditProfileDialog({ user, onClose, onSuccess }: { user: any; onClose: () => void; onSuccess: () => void }) {
+function EditProfileDialog({ user, onClose, onSuccess }: {
+  user: User | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
   const [name, setName] = useState(user?.name || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [socialUrl, setSocialUrl] = useState(user?.socialUrl || '');
@@ -262,35 +297,24 @@ function EditProfileDialog({ user, onClose, onSuccess }: { user: any; onClose: (
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setPhotoFile(file);
-    }
+    if (file) setPhotoFile(file);
   };
 
   const handleSubmit = async () => {
     setLoading(true);
     setError('');
-
     try {
       let profilePhotoUrl = user?.profilePhotoUrl;
-
       if (photoFile) {
         setUploading(true);
         const uploadData = await API.uploadPhoto(photoFile);
         profilePhotoUrl = uploadData.url;
         setUploading(false);
       }
-
-      await API.updateProfile({
-        name,
-        bio,
-        socialUrl,
-        profilePhotoUrl,
-      });
-
+      await API.updateProfile({ name, bio, socialUrl, profilePhotoUrl });
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -314,12 +338,7 @@ function EditProfileDialog({ user, onClose, onSuccess }: { user: any; onClose: (
                 </AvatarFallback>
               </Avatar>
               <label className="flex-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className="hidden"
-                />
+                <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
                 <Button
                   type="button"
                   variant="outline"

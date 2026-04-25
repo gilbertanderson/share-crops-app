@@ -1,10 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API, AuthManager } from '../../utils/api';
+import type { Offer, Listing, User } from '../../types';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { SubmitRatingDialog } from './ListingDetail';
 import { TomatoLoader } from './ui/tomato-loader';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 
 const STATUS_COLORS = {
   pending: 'bg-warning text-warning-foreground',
@@ -20,33 +31,27 @@ const STATUS_LABELS = {
   completed: 'Completed',
 };
 
-interface OfferCardProps {
-  offer: any;
+function OfferCard({ offer, viewAs, onAction }: {
+  offer: Offer;
   viewAs: 'buyer' | 'seller';
   onAction: () => void;
-}
-
-function OfferCard({ offer, viewAs, onAction }: OfferCardProps) {
-  const [listing, setListing] = useState<any>(null);
-  const [otherUser, setOtherUser] = useState<any>(null);
+}) {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [ratingSuccess, setRatingSuccess] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [offer]);
+  const { data: listingData } = useQuery({
+    queryKey: ['listing', offer.listingId],
+    queryFn: () => API.getListing(offer.listingId),
+  });
+  const listing: Listing | null = listingData?.listing ?? null;
 
-  const loadData = async () => {
-    try {
-      const listingData = await API.getListing(offer.listingId);
-      setListing(listingData.listing);
-
-      const otherUserId = viewAs === 'buyer' ? offer.sellerId : offer.buyerId;
-      const userData = await API.getProfile(otherUserId);
-      setOtherUser(userData.profile);
-    } catch (err) {
-      console.error('Failed to load offer data', err);
-    }
-  };
+  const otherUserId = viewAs === 'buyer' ? offer.sellerId : offer.buyerId;
+  const { data: otherUserData } = useQuery({
+    queryKey: ['profile', otherUserId],
+    queryFn: () => API.getProfile(otherUserId),
+    enabled: !!otherUserId,
+  });
+  const otherUser: User | null = otherUserData?.profile ?? null;
 
   const handleAccept = async () => {
     try {
@@ -121,12 +126,7 @@ function OfferCard({ offer, viewAs, onAction }: OfferCardProps) {
                 >
                   Accept
                 </Button>
-                <Button
-                  onClick={handleDecline}
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                >
+                <Button onClick={handleDecline} size="sm" variant="outline" className="flex-1">
                   Decline
                 </Button>
               </>
@@ -166,34 +166,41 @@ function OfferCard({ offer, viewAs, onAction }: OfferCardProps) {
           onClose={() => setShowRatingDialog(false)}
           onSuccess={() => {
             setShowRatingDialog(false);
-            alert('Thank you for your rating!');
+            setRatingSuccess(true);
             onAction();
           }}
         />
       )}
+
+      <AlertDialog open={ratingSuccess} onOpenChange={setRatingSuccess}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rating submitted!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Thank you for your rating.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setRatingSuccess(false)}>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
 
 export function Offers() {
+  const queryClient = useQueryClient();
   const [viewAs, setViewAs] = useState<'buyer' | 'seller'>('buyer');
-  const [offers, setOffers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadOffers();
-  }, [viewAs]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['offers', viewAs],
+    queryFn: () => API.getMyOffers(viewAs),
+  });
+  const offers: Offer[] = data?.offers ?? [];
 
-  const loadOffers = async () => {
-    setLoading(true);
-    try {
-      const data = await API.getMyOffers(viewAs);
-      setOffers(data.offers || []);
-    } catch (err) {
-      console.error('Failed to load offers', err);
-    } finally {
-      setLoading(false);
-    }
+  const handleAction = () => {
+    queryClient.invalidateQueries({ queryKey: ['offers', viewAs] });
   };
 
   return (
@@ -224,7 +231,7 @@ export function Offers() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {loading ? (
+        {isLoading ? (
           <TomatoLoader label="Loading..." className="py-12" />
         ) : offers.length === 0 ? (
           <div className="text-center py-12 space-y-2">
@@ -245,7 +252,7 @@ export function Offers() {
                 key={offer.id}
                 offer={offer}
                 viewAs={viewAs}
-                onAction={loadOffers}
+                onAction={handleAction}
               />
             ))}
           </div>

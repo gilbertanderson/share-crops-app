@@ -30,10 +30,8 @@
 
 **Option A: Using Supabase Dashboard (Easiest)**
 
-1. Open https://supabase.com/dashboard/project/xwjvtpzpufhuybylnwzx
-2. Log in with:
-   - **Email:** gilbertjanderson@gmail.com
-   - **Password:** Community-admin-crop-share-1
+1. Open the Supabase dashboard for your project
+2. Log in with your Supabase account credentials
 3. Navigate to **Edge Functions** section
 4. Click on the **server** function
 5. Replace the entire code with contents from:

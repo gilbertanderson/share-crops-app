@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API, AuthManager } from '../../utils/api';
+import type { Listing } from '../../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,59 +11,59 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { TomatoRatingDisplay, TomatoRating } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { TomatoLoader } from './ui/tomato-loader';
 
-interface ListingDetailProps {
-  listingId: string;
-  onBack: () => void;
-  onChat: (threadId: string) => void;
-}
-
-export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps) {
-  const [listing, setListing] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export function ListingDetail() {
+  const { id: listingId = '' } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [showOfferDialog, setShowOfferDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [offerSuccess, setOfferSuccess] = useState(false);
   const currentUser = AuthManager.getUser();
 
-  useEffect(() => {
-    loadListing();
-  }, [listingId]);
-
-  const loadListing = async () => {
-    setLoading(true);
-    try {
-      const data = await API.getListing(listingId);
-      setListing(data.listing);
-    } catch (err) {
-      console.error('Failed to load listing', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ['listing', listingId],
+    queryFn: () => API.getListing(listingId),
+    enabled: !!listingId,
+  });
+  const listing: Listing | null = data?.listing ?? null;
 
   const handleStartChat = async () => {
+    if (!listing) return;
     try {
-      const data = await API.createThread(listingId, listing.sellerId);
-      onChat(data.thread.id);
+      const result = await API.createThread(listingId, listing.sellerId);
+      navigate(`/messages/${result.thread.id}`);
     } catch (err) {
       console.error('Failed to start chat', err);
     }
   };
 
   const handleDeleteListing = async () => {
-    const confirmed = window.confirm('Delete this listing? This action cannot be undone.');
-    if (!confirmed) return;
-
+    setDeleteError('');
     try {
       await API.deleteListing(listingId);
-      onBack();
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete listing');
+      queryClient.invalidateQueries({ queryKey: ['listings'] });
+      setShowDeleteConfirm(false);
+      navigate('/marketplace');
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete listing');
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <TomatoLoader label="Loading..." />
@@ -83,7 +86,8 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <button
-            onClick={onBack}
+            type="button"
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,18 +99,17 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Photo Gallery */}
         {listing.photos && listing.photos.length > 0 && (
-          <div className="w-full max-w-[398px] mx-auto aspect-square rounded-xl overflow-hidden bg-muted">
+          <div className="w-[398px] h-[398px] mx-auto rounded-xl overflow-hidden bg-muted">
             <img
               src={listing.photos[0]}
               alt={listing.title}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           </div>
         )}
 
-        {/* Listing Info */}
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -136,7 +139,6 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
           )}
         </div>
 
-        {/* Seller Info */}
         {listing.seller && (
           <Card>
             <CardContent className="p-4">
@@ -161,14 +163,9 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
           </Card>
         )}
 
-        {/* Actions */}
         {!isOwnListing && (
           <div className="flex gap-3 sticky bottom-4">
-            <Button
-              onClick={handleStartChat}
-              variant="outline"
-              className="flex-1"
-            >
+            <Button onClick={handleStartChat} variant="outline" className="flex-1">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
@@ -186,7 +183,7 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
         {isOwnListing && (
           <div className="sticky bottom-4">
             <Button
-              onClick={handleDeleteListing}
+              onClick={() => setShowDeleteConfirm(true)}
               variant="outline"
               className="w-full border-error text-error hover:bg-error/10"
             >
@@ -196,13 +193,52 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
         )}
       </div>
 
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this listing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+              {deleteError && (
+                <span className="block mt-2 text-error">{deleteError}</span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteListing}
+              className="bg-error text-error-foreground hover:bg-error/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={offerSuccess} onOpenChange={setOfferSuccess}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Offer submitted!</AlertDialogTitle>
+            <AlertDialogDescription>
+              The seller will be notified of your offer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setOfferSuccess(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {showOfferDialog && (
         <MakeOfferDialog
           listingId={listingId}
           onClose={() => setShowOfferDialog(false)}
           onSuccess={() => {
             setShowOfferDialog(false);
-            alert('Offer submitted! The seller will be notified.');
+            setOfferSuccess(true);
           }}
         />
       )}
@@ -210,7 +246,11 @@ export function ListingDetail({ listingId, onBack, onChat }: ListingDetailProps)
   );
 }
 
-function MakeOfferDialog({ listingId, onClose, onSuccess }: { listingId: string; onClose: () => void; onSuccess: () => void }) {
+function MakeOfferDialog({ listingId, onClose, onSuccess }: {
+  listingId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
   const [offeredProduce, setOfferedProduce] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -221,15 +261,13 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: { listingId: string;
       setError('Please specify what you are offering');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
       await API.createOffer(listingId, offeredProduce, message);
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit offer');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit offer');
     } finally {
       setLoading(false);
     }
@@ -273,12 +311,7 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: { listingId: string;
           )}
 
           <div className="flex gap-2">
-            <Button
-              onClick={onClose}
-              variant="outline"
-              className="flex-1"
-              disabled={loading}
-            >
+            <Button onClick={onClose} variant="outline" className="flex-1" disabled={loading}>
               Cancel
             </Button>
             <Button
@@ -311,15 +344,13 @@ export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }:
       setError('Please select a rating');
       return;
     }
-
     setLoading(true);
     setError('');
-
     try {
       await API.createRating(offerId, rating, comment);
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit rating');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to submit rating');
     } finally {
       setLoading(false);
     }
@@ -335,12 +366,7 @@ export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }:
         <div className="space-y-6">
           <div className="space-y-4">
             <Label className="text-center block">How was your experience?</Label>
-            <TomatoRating
-              rating={rating}
-              onChange={setRating}
-              size="lg"
-              showLabel={true}
-            />
+            <TomatoRating rating={rating} onChange={setRating} size="lg" showLabel={true} />
           </div>
 
           <div className="space-y-2">
@@ -362,12 +388,7 @@ export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }:
           )}
 
           <div className="flex gap-2">
-            <Button
-              onClick={onClose}
-              variant="outline"
-              className="flex-1"
-              disabled={loading}
-            >
+            <Button onClick={onClose} variant="outline" className="flex-1" disabled={loading}>
               Cancel
             </Button>
             <Button

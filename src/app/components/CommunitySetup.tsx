@@ -55,7 +55,7 @@ export function CommunitySetup({ onComplete, onLogout }: CommunitySetupProps) {
 
     try {
       const data = await API.createCommunity(communityName, zipCode);
-      if (data.success) {
+      if (data.community) {
         onComplete();
       }
     } catch (err: any) {

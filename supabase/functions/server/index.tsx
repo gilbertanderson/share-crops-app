@@ -1165,6 +1165,37 @@ app.get("/make-server-dd877831/offers/my", async (c) => {
   }
 });
 
+// ===== TRENDING ROUTES =====
+
+app.get("/make-server-dd877831/trending/zip/:zipCode", async (c) => {
+  try {
+    const zipCode = c.req.param('zipCode');
+
+    // Get all active listings in this zip code
+    const allListings = await kv.getByPrefix('listing:community:');
+    const zipListings = allListings.filter(
+      (l: any) => l && typeof l === 'object' && l.zipCode === zipCode && l.status === 'active' && !isListingExpired(l)
+    );
+
+    // Count offers per listing in parallel
+    const withCounts = await Promise.all(
+      zipListings.map(async (listing: any) => {
+        const offers = await kv.getByPrefix(`offer:listing:${listing.id}:`);
+        return { listing, offerCount: Array.isArray(offers) ? offers.length : 0 };
+      })
+    );
+
+    // Sort by offer count descending, return top 5
+    withCounts.sort((a: any, b: any) => b.offerCount - a.offerCount);
+    const items = withCounts.slice(0, 5);
+
+    return c.json({ items });
+  } catch (error) {
+    console.error("Trending by zip error:", error);
+    return c.json({ error: "Failed to get trending items" }, 500);
+  }
+});
+
 // ===== CHAT ROUTES =====
 
 app.post("/make-server-dd877831/chat/threads", async (c) => {

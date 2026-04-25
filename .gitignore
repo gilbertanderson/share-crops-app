@@ -2,4 +2,16 @@ share-crops-app/
 dist/
 test-results/
 .DS_Store
+node_modules/
+.env
+.env.local
+.env.*.local
+*.local
 
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules
+node_modules

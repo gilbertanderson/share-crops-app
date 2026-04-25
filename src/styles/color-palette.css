@@ -1,59 +1,59 @@
-/* Design System - Green & White Color Palette (Nextdoor-inspired) */
+/* Design System - Forest Green & Earthy Cream Palette */
 
 :root {
-  /* Primary Green - Nextdoor-style vibrant green */
-  --color-primary-50: #f0f9f5;    /* Lightest - backgrounds */
-  --color-primary-100: #d0f0e0;   /* Very light - subtle backgrounds */
-  --color-primary-200: #a8e5c6;   /* Light - hover states, backgrounds */
-  --color-primary-300: #7ed5aa;   /* Lighter - secondary interactions */
-  --color-primary-400: #4fc183;   /* Medium-light - secondary buttons */
-  --color-primary-500: #2da965;   /* PRIMARY - Main brand color (Nextdoor green) */
-  --color-primary-600: #248a54;   /* Darker - active states */
-  --color-primary-700: #1a6b42;   /* Dark - hover states */
-  --color-primary-800: #134c31;   /* Darker - focus states */
-  --color-primary-900: #0d2e1e;   /* Darkest - text on light backgrounds */
+  /* Primary Forest Green Scale */
+  --color-primary-50: #eef5ef;
+  --color-primary-100: #d9e9dc;
+  --color-primary-200: #b9d3bf;
+  --color-primary-300: #94ba9f;
+  --color-primary-400: #6f9f80;
+  --color-primary-500: #2f5d3a;
+  --color-primary-600: #264c30;
+  --color-primary-700: #1e3b26;
+  --color-primary-800: #162b1c;
+  --color-primary-900: #0f1b12;
 
-  /* Secondary Green - Accent green for complementary elements */
-  --color-secondary-50: #f5fef8;
-  --color-secondary-100: #d5f0e0;
-  --color-secondary-200: #b0e5c6;
-  --color-secondary-300: #80d5a8;
-  --color-secondary-400: #55c285;
-  --color-secondary-500: #2dad6f;
-  --color-secondary-600: #24915c;
-  --color-secondary-700: #1a7048;
-  --color-secondary-800: #125035;
-  --color-secondary-900: #0a3222;
+  /* Secondary Earthy Cream / Ochre Scale */
+  --color-secondary-50: #fdfaf4;
+  --color-secondary-100: #f8f1e3;
+  --color-secondary-200: #efe3cb;
+  --color-secondary-300: #e4d2ae;
+  --color-secondary-400: #d8be90;
+  --color-secondary-500: #caa46f;
+  --color-secondary-600: #b18654;
+  --color-secondary-700: #8c6840;
+  --color-secondary-800: #664a2e;
+  --color-secondary-900: #43301d;
 
-  /* Neutral - White & Gray scale */
-  --color-neutral-0: #ffffff;     /* Pure white */
-  --color-neutral-50: #f9fafb;    /* Near white - backgrounds */
-  --color-neutral-100: #f3f4f6;   /* Very light gray - alt backgrounds */
-  --color-neutral-200: #e5e7eb;   /* Light gray - borders, dividers */
-  --color-neutral-300: #d1d5db;   /* Gray - subtle borders */
-  --color-neutral-400: #9ca3af;   /* Medium gray - secondary text */
-  --color-neutral-500: #6b7280;   /* Gray - body text */
-  --color-neutral-600: #4b5563;   /* Dark gray - headings */
-  --color-neutral-700: #374151;   /* Dark gray - strong text */
-  --color-neutral-800: #1f2937;   /* Very dark gray - text */
-  --color-neutral-900: #111827;   /* Almost black - maximum contrast */
+  /* Neutral Cream + Bark Scale */
+  --color-neutral-0: #fffcf7;
+  --color-neutral-50: #f9f4ea;
+  --color-neutral-100: #f2eadb;
+  --color-neutral-200: #e4d8c2;
+  --color-neutral-300: #d2c2a6;
+  --color-neutral-400: #ae9b7d;
+  --color-neutral-500: #8a785f;
+  --color-neutral-600: #6c5d49;
+  --color-neutral-700: #4f4335;
+  --color-neutral-800: #342c23;
+  --color-neutral-900: #221d17;
 
   /* Status Colors */
-  --color-success: #10b981;       /* Success - bright green */
-  --color-success-light: #d1fae5;
-  --color-success-dark: #059669;
+  --color-success: #3f7a4d;
+  --color-success-light: #d9e9dc;
+  --color-success-dark: #264c30;
 
-  --color-warning: #f59e0b;       /* Warning - amber */
-  --color-warning-light: #fef3c7;
-  --color-warning-dark: #d97706;
+  --color-warning: #c0893a;
+  --color-warning-light: #efe3cb;
+  --color-warning-dark: #8c6840;
 
-  --color-error: #ef4444;         /* Error - red */
-  --color-error-light: #fee2e2;
-  --color-error-dark: #dc2626;
+  --color-error: #b6463a;
+  --color-error-light: #f3d9d5;
+  --color-error-dark: #8b332b;
 
-  --color-info: #3b82f6;          /* Info - blue */
-  --color-info-light: #dbeafe;
-  --color-info-dark: #1d4ed8;
+  --color-info: #4a6f7d;
+  --color-info-light: #d9e3e8;
+  --color-info-dark: #35525d;
 
   /* Semantic Color Names */
   --color-background: var(--color-neutral-0);

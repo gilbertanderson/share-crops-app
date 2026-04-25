@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { API } from '../../utils/api';
+import { validateEmail, validatePassword } from '../../utils/security';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -21,6 +22,20 @@ export function Auth({ onSuccess }: AuthProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    if (mode !== 'reset') {
+      const { valid, errors } = validatePassword(password);
+      if (!valid) {
+        setError(errors[0]);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -29,7 +44,6 @@ export function Auth({ onSuccess }: AuthProps) {
         setResetSent(true);
       } else if (mode === 'signup') {
         await API.signup(email, password, name);
-        // Auto login after signup
         await API.login(email, password);
         await API.getMe();
         onSuccess();
@@ -38,8 +52,8 @@ export function Auth({ onSuccess }: AuthProps) {
         await API.getMe();
         onSuccess();
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -125,9 +139,13 @@ export function Auth({ onSuccess }: AuthProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
                   className="bg-input-background border-input-border"
                 />
+                {mode === 'signup' && (
+                  <p className="text-xs text-muted-foreground">
+                    8+ characters, uppercase letter, and number required.
+                  </p>
+                )}
                 {mode === 'login' && (
                   <div className="flex justify-end">
                     <button

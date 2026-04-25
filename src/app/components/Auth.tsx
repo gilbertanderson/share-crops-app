@@ -5,7 +5,6 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Separator } from './ui/separator';
 
 interface AuthProps {
   onSuccess: () => void;
@@ -19,7 +18,6 @@ export function Auth({ onSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
-  const [oauthLoading, setOAuthLoading] = useState(false);
   // Honeypot — hidden field that only bots fill in
   const honeypotRef = useRef<HTMLInputElement>(null);
   // Lockout countdown
@@ -48,17 +46,6 @@ export function Auth({ onSuccess }: AuthProps) {
     const m = Math.floor(secs / 60).toString().padStart(1, '0');
     const s = (secs % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
-  };
-
-  const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
-    try {
-      setError('');
-      setOAuthLoading(true);
-      await API.signInWithOAuth(provider);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : `${provider} sign-in failed`);
-      setOAuthLoading(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -268,7 +255,8 @@ export function Auth({ onSuccess }: AuthProps) {
 
             {mode !== 'reset' && (
               <>
-                <Separator className="my-4" />
+                {/* OAuth providers disabled for now — requires Supabase dashboard configuration */}
+                {/* <Separator className="my-4" />
                 <div className="space-y-2">
                   <button
                     type="button"
@@ -296,7 +284,7 @@ export function Auth({ onSuccess }: AuthProps) {
                     </svg>
                     <span>Sign in with Apple</span>
                   </button>
-                </div>
+                </div> */}
               </>
             )}
 

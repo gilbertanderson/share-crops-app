@@ -280,11 +280,26 @@ function NavButton({ icon, filledIcon, label, active, showBadge = false, onClick
         active ? 'text-primary' : 'text-muted-foreground hover:text-primary focus-visible:text-primary'
       }`}
     >
-      <span className="relative inline-flex">
-        <span className="block group-hover:hidden group-focus-visible:hidden">
+      {/* Fixed-size container: both icons are stacked via absolute so layout never shifts */}
+      <span className="relative flex-none w-6 h-6">
+        {/* Outline — visible when inactive and not hovered/focused */}
+        <span
+          className={`absolute inset-0 transition-opacity duration-100 ${
+            active
+              ? 'opacity-0'
+              : 'opacity-100 group-hover:opacity-0 group-focus-visible:opacity-0'
+          }`}
+        >
           {icon}
         </span>
-        <span className="hidden group-hover:block group-focus-visible:block">
+        {/* Filled — visible when active, or when inactive and hovered/focused */}
+        <span
+          className={`absolute inset-0 transition-opacity duration-100 ${
+            active
+              ? 'opacity-100'
+              : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'
+          }`}
+        >
           {filledIcon}
         </span>
         {showBadge ? (

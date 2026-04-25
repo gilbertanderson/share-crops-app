@@ -1,6 +1,6 @@
 import { test, expect, Browser, BrowserContext, Page } from '@playwright/test';
 
-const API_BASE = 'http://localhost:5173';
+const API_BASE = process.env.API_BASE || 'http://127.0.0.1:4173';
 const ts = Date.now();
 
 // Helper to create unique test credentials

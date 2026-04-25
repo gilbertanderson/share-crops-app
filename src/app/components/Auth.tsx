@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { API } from '../../utils/api';
-import { validateEmail, validatePassword } from '../../utils/security';
+import { validateEmail, validatePassword, LoginAttemptTracker } from '../../utils/security';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -18,10 +18,51 @@ export function Auth({ onSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  // Honeypot — hidden field that only bots fill in
+  const honeypotRef = useRef<HTMLInputElement>(null);
+  // Lockout countdown
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // Drive lockout countdown ticker
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const id = setInterval(() => {
+      setLockoutSeconds((s) => {
+        if (s <= 1) { clearInterval(id); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [lockoutSeconds]);
+
+  // Re-check tracker when email changes so UI reflects an existing lockout
+  useEffect(() => {
+    if (mode === 'login' && email && LoginAttemptTracker.isLockedOut(email)) {
+      setLockoutSeconds(LoginAttemptTracker.getRetryAfterSeconds(email));
+    }
+  }, [email, mode]);
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(1, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Honeypot check — bots fill hidden fields; real users never see it
+    if (honeypotRef.current?.value) {
+      // Silently no-op to avoid tipping off the bot
+      return;
+    }
+
+    // Client-side lockout gate (mirrors server rule)
+    if (mode === 'login' && LoginAttemptTracker.isLockedOut(email)) {
+      setLockoutSeconds(LoginAttemptTracker.getRetryAfterSeconds(email));
+      return;
+    }
 
     if (!validateEmail(email)) {
       setError('Please enter a valid email address');
@@ -50,10 +91,21 @@ export function Auth({ onSuccess }: AuthProps) {
       } else {
         await API.login(email, password);
         await API.getMe();
+        LoginAttemptTracker.clear(email);
         onSuccess();
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Authentication failed');
+      if (mode === 'login') {
+        LoginAttemptTracker.record(email);
+        if (LoginAttemptTracker.isLockedOut(email)) {
+          setLockoutSeconds(LoginAttemptTracker.getRetryAfterSeconds(email));
+          setError('');
+        } else {
+          setError(err instanceof Error ? err.message : 'Authentication failed');
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Authentication failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -101,6 +153,16 @@ export function Auth({ onSuccess }: AuthProps) {
             </div>
           ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Honeypot — invisible to real users, bots fill it in */}
+            <input
+              ref={honeypotRef}
+              type="text"
+              name="website"
+              tabIndex={-1}
+              aria-hidden="true"
+              autoComplete="off"
+              className="absolute -left-[9999px] w-px h-px opacity-0 pointer-events-none"
+            />
             {mode === 'signup' && (
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
@@ -160,6 +222,17 @@ export function Auth({ onSuccess }: AuthProps) {
               </div>
             )}
 
+            {lockoutSeconds > 0 && (
+              <div className="bg-amber-50 border border-amber-300 rounded-md p-3 dark:bg-amber-950/20 dark:border-amber-700">
+                <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+                  Too many failed attempts.
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  Try again in <span className="font-mono font-semibold">{formatCountdown(lockoutSeconds)}</span>
+                </p>
+              </div>
+            )}
+
             {error && (
               <div className="bg-error/10 border border-error rounded-md p-3">
                 <p className="text-sm text-error">{error}</p>
@@ -169,7 +242,7 @@ export function Auth({ onSuccess }: AuthProps) {
             <Button
               type="submit"
               className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
-              disabled={loading}
+              disabled={loading || lockoutSeconds > 0}
             >
               {loading
                 ? 'Please wait...'

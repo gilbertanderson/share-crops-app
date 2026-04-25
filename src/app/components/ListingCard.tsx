@@ -4,6 +4,7 @@ import type { Listing, User } from '../../types';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { TomatoRatingDisplay } from './TomatoRating';
+import { isProduceInSeason } from '../../utils/seasonalProduce';
 
 interface ListingCardProps {
   listing: Listing;
@@ -12,6 +13,7 @@ interface ListingCardProps {
 
 export function ListingCard({ listing, onClick }: ListingCardProps) {
   const [seller, setSeller] = useState<User | null>(null);
+  const inSeason: boolean = isProduceInSeason(listing.title, listing.description);
 
   useEffect(() => {
     const loadSeller = async () => {
@@ -28,9 +30,20 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
   return (
     <Card
       onClick={onClick}
-      className="w-[398px] mx-auto cursor-pointer transition-shadow overflow-hidden hover:shadow-lg"
+      className={[
+        'w-[398px] mx-auto cursor-pointer transition-shadow overflow-hidden',
+        inSeason ? 'in-season-card' : 'hover:shadow-lg',
+      ].join(' ')}
     >
       <div className="relative w-[398px] h-[398px] bg-muted">
+        {inSeason ? (
+          <span className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full shadow">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M17.293 3.293a1 1 0 011.414 1.414l-10 10a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l9.293-9.293z" />
+            </svg>
+            In Season
+          </span>
+        ) : null}
         {listing.photos?.[0] ? (
           <img
             src={listing.photos[0]}
@@ -54,14 +67,14 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground line-clamp-2">{listing.description}</p>
-        {listing.quantity && (
+        {listing.quantity ? (
           <p className="text-sm font-medium text-foreground">Qty: {listing.quantity}</p>
-        )}
-        {seller && seller.ratingCount > 0 && (
+        ) : null}
+        {seller && seller.ratingCount > 0 ? (
           <div className="pt-1">
             <TomatoRatingDisplay rating={seller.rating} count={seller.ratingCount} />
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );

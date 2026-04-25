@@ -77,7 +77,11 @@ export function Marketplace() {
       )
     : listings;
 
-  const visibleListings = [...filteredListings];
+  const visibleListings = [...filteredListings].sort((a, b) => {
+    const aIn = isProduceInSeason(a.title, a.description);
+    const bIn = isProduceInSeason(b.title, b.description);
+    return aIn === bIn ? 0 : aIn ? -1 : 1;
+  });
 
   return (
     <div className="min-h-screen bg-background">

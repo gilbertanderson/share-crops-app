@@ -117,6 +117,7 @@ type NavTab = 'marketplace' | 'offers' | 'messages' | 'profile';
 function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const isChatThread = location.pathname.startsWith('/messages/');
 
   const activeTab = (): NavTab => {
     if (location.pathname.startsWith('/offers')) return 'offers';
@@ -126,11 +127,12 @@ function AppLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className={`min-h-screen bg-background ${isChatThread ? 'pb-0' : 'pb-20'}`}>
       <main id="main-content" tabIndex={-1} className="outline-none">
         <Outlet />
       </main>
 
+      {!isChatThread && (
       <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 safe-area-inset-bottom">
         <div className="flex items-center justify-around h-20 px-4">
           <NavButton
@@ -175,6 +177,7 @@ function AppLayout() {
           />
         </div>
       </nav>
+      )}
     </div>
   );
 }
@@ -190,7 +193,7 @@ function NavButton({ icon, label, active, onClick }: {
       type="button"
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
-      className={`flex flex-col items-center gap-1 min-w-[64px] transition-colors ${
+      className={`flex flex-col items-center gap-1 min-w-[64px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md ${
         active ? 'text-primary' : 'text-muted-foreground'
       }`}
     >

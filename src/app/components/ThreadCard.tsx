@@ -32,7 +32,7 @@ export function ThreadCard({ thread, otherUserId, onClick }: ThreadCardProps) {
       tabIndex={0}
       aria-label={`Message thread with ${otherUser?.name || 'user'}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-      className="cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200"
+      className="cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">

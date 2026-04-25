@@ -35,11 +35,11 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
       aria-label={`View listing: ${listing.title}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
       className={[
-        'w-[398px] mx-auto cursor-pointer transition-all duration-200 overflow-hidden',
+        'w-full max-w-[398px] mx-auto cursor-pointer transition-all duration-200 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         inSeason ? 'in-season-card' : 'hover:shadow-2xl hover:-translate-y-0.5',
       ].join(' ')}
     >
-      <div className="relative w-[398px] h-[398px] bg-muted">
+      <div className="relative w-full aspect-square bg-muted">
         {inSeason ? (
           <span className="absolute top-2 left-2 z-0 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full shadow">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">

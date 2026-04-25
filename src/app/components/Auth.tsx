@@ -82,19 +82,23 @@ export function Auth({ onSuccess }: AuthProps) {
     try {
       if (mode === 'reset') {
         await API.resetPassword(email);
+        setLoading(false);
         setResetSent(true);
       } else if (mode === 'signup') {
         await API.signup(email, password, name);
         await API.login(email, password);
         await API.getMe();
         onSuccess();
+        // Keep loading=true — component will unmount on navigation
       } else {
         await API.login(email, password);
         await API.getMe();
         LoginAttemptTracker.clear(email);
         onSuccess();
+        // Keep loading=true — component will unmount on navigation
       }
     } catch (err: unknown) {
+      setLoading(false);
       if (mode === 'login') {
         LoginAttemptTracker.record(email);
         if (LoginAttemptTracker.isLockedOut(email)) {
@@ -106,8 +110,6 @@ export function Auth({ onSuccess }: AuthProps) {
       } else {
         setError(err instanceof Error ? err.message : 'Authentication failed');
       }
-    } finally {
-      setLoading(false);
     }
   };
 

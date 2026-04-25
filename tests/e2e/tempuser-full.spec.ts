@@ -120,8 +120,8 @@ test.describe('tempUser full app walkthrough', () => {
   test('5 · open a listing detail page', async ({ page }) => {
     await login(page);
     await page.waitForURL(/marketplace/, { timeout: 15000 });
-    // Click the first listing card
-    const firstCard = page.locator('.cursor-pointer').first();
+    // Click the first listing card (role="button" set by accessibility fix)
+    const firstCard = page.locator('[role="button"][aria-label*="View listing"]').first();
     await expect(firstCard).toBeVisible({ timeout: 10000 });
     await firstCard.click();
     // Should navigate to /listing/:id

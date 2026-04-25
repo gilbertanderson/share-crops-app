@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from './context/AuthContext';
 import { Auth } from './components/Auth';
@@ -10,34 +10,38 @@ import { ChatList, ChatThread } from './components/Chat';
 import { Profile } from './components/Profile';
 import { ResetPassword } from './components/ResetPassword';
 import OAuthCallback from './components/OAuthCallback';
+import { TomatoLoader } from './components/ui/tomato-loader';
 
 export default function App() {
-  const { isAuthenticated, hasCompletedSetup, loading, refreshAuth, logout } = useAuth();
+  const { isAuthenticated, hasCompletedSetup, loading: authLoading, refreshAuth, logout } = useAuth();
+  const [phase, setPhase] = useState<'loading' | 'completing' | 'ready'>('loading');
 
-  if (loading) {
+  useEffect(() => {
+    if (!authLoading) {
+      setPhase('completing');
+      const t = setTimeout(() => setPhase('ready'), 420);
+      return () => clearTimeout(t);
+    }
+  }, [authLoading]);
+
+  if (phase !== 'ready') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
-          <svg viewBox="0 0 48 48" className="w-20 h-20 mx-auto" fill="none" aria-hidden="true">
-            <defs>
-              <clipPath id="app-loading-tomato-clip">
-                <circle cx="24" cy="28" r="16" />
-              </clipPath>
-            </defs>
-            <circle cx="24" cy="28" r="16" fill="var(--tomato-empty)" />
-            <g clipPath="url(#app-loading-tomato-clip)">
-              <rect x="8" y="44" width="32" height="0" fill="var(--tomato-filled)">
-                <animate attributeName="y" values="44;12" dur="1.8s" repeatCount="indefinite" />
-                <animate attributeName="height" values="0;32" dur="1.8s" repeatCount="indefinite" />
-              </rect>
-            </g>
-            <circle cx="24" cy="28" r="16" fill="var(--tomato-filled)" />
-            <path
-              d="M24 12V8M20 10.5C20 10.5 21 12 24 12C27 12 28 10.5 28 10.5M18 8C18 8 19 10 22 11M30 8C30 8 29 10 26 11"
-              stroke="#4a7c3f" strokeWidth="2" strokeLinecap="round"
-            />
-          </svg>
-          <p className="text-muted-foreground">Loading Share Crops...</p>
+          {phase === 'completing' ? (
+            <div className="tomato-complete-pop">
+              <svg viewBox="0 0 48 48" className="w-20 h-20 mx-auto" fill="none" aria-hidden="true">
+                <circle cx="24" cy="28" r="16" fill="var(--tomato-filled)" />
+                <path
+                  d="M24 12V8M20 10.5C20 10.5 21 12 24 12C27 12 28 10.5 28 10.5M18 8C18 8 19 10 22 11M30 8C30 8 29 10 26 11"
+                  stroke="#4a7c3f" strokeWidth="2" strokeLinecap="round"
+                />
+              </svg>
+              <p className="text-muted-foreground">Loading Share Crops...</p>
+            </div>
+          ) : (
+            <TomatoLoader size="lg" label="Loading Share Crops..." />
+          )}
         </div>
       </div>
     );
@@ -51,6 +55,7 @@ export default function App() {
       >
         Skip to main content
       </a>
+      <ScrollToTop />
       <Routes>
       {/* Public */}
       <Route
@@ -110,6 +115,14 @@ function RequireAuth({ isAuthenticated, hasSetup }: { isAuthenticated: boolean; 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!hasSetup) return <Navigate to="/community-setup" replace />;
   return <Outlet />;
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
 }
 
 type NavTab = 'marketplace' | 'offers' | 'messages' | 'profile';

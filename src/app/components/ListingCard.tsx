@@ -9,9 +9,11 @@ import { isProduceInSeason } from '../../utils/seasonalProduce';
 interface ListingCardProps {
   listing: Listing;
   onClick: () => void;
+  mobileActive?: boolean;
+  rank?: number | null;
 }
 
-export function ListingCard({ listing, onClick }: ListingCardProps) {
+export function ListingCard({ listing, onClick, mobileActive = false, rank = null }: ListingCardProps) {
   const [seller, setSeller] = useState<User | null>(null);
   const inSeason: boolean = isProduceInSeason(listing.title, listing.description);
 
@@ -30,13 +32,20 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
   return (
     <Card
       onClick={onClick}
+      onPointerDown={(e) => {
+        if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+          (e.currentTarget as HTMLElement).focus();
+        }
+      }}
       role="button"
       tabIndex={0}
+      data-mobile-card-id={listing.id}
       aria-label={`View listing: ${listing.title}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
       className={[
         'w-full max-w-[398px] mx-auto cursor-pointer transition-all duration-200 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-        inSeason ? 'in-season-card' : 'hover:shadow-2xl hover:-translate-y-0.5',
+        inSeason ? 'in-season-card' : 'hover:shadow-2xl hover:-translate-y-0.5 hover:scale-[1.01] mobile-focus-shadow-2xl',
+        mobileActive ? 'mobile-scroll-active-2xl' : '',
       ].join(' ')}
     >
       <div className="relative w-full aspect-square bg-muted">
@@ -70,13 +79,25 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
             {listing.zipCode}
           </Badge>
         </div>
+        {rank ? (
+          <div className="flex items-center gap-1 text-xs font-semibold text-primary">
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
+            </svg>
+            Community Rank #{rank}
+          </div>
+        ) : null}
         <p className="text-sm text-muted-foreground line-clamp-2">{listing.description}</p>
         {listing.quantity ? (
           <p className="text-sm font-medium text-foreground">Qty: {listing.quantity}</p>
         ) : null}
-        {seller && seller.ratingCount > 0 ? (
+        {seller ? (
           <div className="pt-1">
-            <TomatoRatingDisplay rating={seller.rating} count={seller.ratingCount} />
+            {seller.ratingCount > 0 ? (
+              <TomatoRatingDisplay rating={seller.rating} count={seller.ratingCount} />
+            ) : (
+              <span className="text-xs text-muted-foreground">New seller</span>
+            )}
           </div>
         ) : null}
       </CardContent>

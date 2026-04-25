@@ -51,10 +51,23 @@ export class API {
       headers,
     });
 
-    const data = await response.json();
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
 
     if (!response.ok) {
-      throw new Error(data.error || 'Request failed');
+      if (response.status === 401) {
+        AuthManager.clearToken();
+      }
+      throw new Error(
+        data?.error ||
+        data?.message ||
+        data?.msg ||
+        (response.status === 401 ? 'Session expired. Please log in again.' : `Request failed (${response.status})`)
+      );
     }
 
     return data as T;

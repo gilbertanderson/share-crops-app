@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API } from '../../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { useMobileScrollActive } from '../hooks/useMobileScrollActive';
 import type { User, Listing, Rating, Community } from '../../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -24,6 +26,7 @@ import {
 import { TomatoLoader } from './ui/tomato-loader';
 
 export function Profile() {
+  const navigate = useNavigate();
   const { logout } = useAuth();
   const queryClient = useQueryClient();
   const [confirmLeaveId, setConfirmLeaveId] = useState<string | null>(null);
@@ -43,6 +46,10 @@ export function Profile() {
     enabled: !!user?.id,
   });
   const listings: Listing[] = listingsData?.listings ?? [];
+  const visibleListings = listings.slice(0, 6);
+  const { containerRef: profileListingsRef, activeId: activeProfileListingId } = useMobileScrollActive(
+    visibleListings.map((listing) => listing.id)
+  );
 
   const { data: ratingsData } = useQuery({
     queryKey: ['my-ratings', user?.id],
@@ -158,9 +165,31 @@ export function Profile() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {listings.slice(0, 6).map((listing) => (
-                <Card key={listing.id}>
+            <div ref={profileListingsRef} className="grid grid-cols-2 sm:grid-cols-3 gap-3 mobile-vertical-carousel">
+              {visibleListings.map((listing) => (
+                <Card
+                  key={listing.id}
+                  onClick={() => navigate(`/listing/${listing.id}`)}
+                  onPointerDown={(e) => {
+                    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+                      (e.currentTarget as HTMLElement).focus();
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View listing: ${listing.title}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(`/listing/${listing.id}`);
+                    }
+                  }}
+                  data-mobile-card-id={listing.id}
+                  className={[
+                    'cursor-pointer transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 mobile-focus-shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+                    activeProfileListingId === listing.id ? 'mobile-scroll-active-xl' : '',
+                  ].join(' ')}
+                >
                   <div className="relative w-full aspect-square bg-muted rounded-t-lg overflow-hidden">
                     {listing.photos?.[0] ? (
                       <img

@@ -8,9 +8,10 @@ interface ThreadCardProps {
   thread: Thread;
   otherUserId: string;
   onClick: () => void;
+  mobileActive?: boolean;
 }
 
-export function ThreadCard({ thread, otherUserId, onClick }: ThreadCardProps) {
+export function ThreadCard({ thread, otherUserId, onClick, mobileActive = false }: ThreadCardProps) {
   const [otherUser, setOtherUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -28,11 +29,20 @@ export function ThreadCard({ thread, otherUserId, onClick }: ThreadCardProps) {
   return (
     <Card
       onClick={onClick}
+      onPointerDown={(e) => {
+        if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+          (e.currentTarget as HTMLElement).focus();
+        }
+      }}
       role="button"
       tabIndex={0}
+      data-mobile-card-id={thread.id}
       aria-label={`Message thread with ${otherUser?.name || 'user'}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
-      className="cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      className={[
+        'cursor-pointer hover:shadow-xl hover:-translate-y-0.5 mobile-focus-shadow-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+        mobileActive ? 'mobile-scroll-active-xl' : '',
+      ].join(' ')}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">

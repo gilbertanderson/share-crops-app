@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { TomatoLoader } from './ui/tomato-loader';
 import { ListingCard } from './ListingCard';
 import { isProduceInSeason } from '../../utils/seasonalProduce';
+import { useMobileScrollActive } from '../hooks/useMobileScrollActive';
 
 function TrendingSection({ zipCode }: { zipCode: string }) {
   const { data, isLoading } = useQuery({
@@ -68,6 +69,13 @@ export function Marketplace() {
   });
   const listings: Listing[] = listingsData?.listings ?? [];
 
+  const { data: rankingData } = useQuery({
+    queryKey: ['trending', community?.zipCode],
+    queryFn: () => API.getTrendingByZip(community!.zipCode),
+    enabled: !!community?.zipCode,
+    staleTime: 60_000,
+  });
+
   // Avoid flashing empty state before community context resolves and listings query can start.
   const showListingsLoader =
     isCommunityLoading || (filter === 'community' && communityData === undefined) || isListingsLoading;
@@ -86,6 +94,17 @@ export function Marketplace() {
     const bIn = isProduceInSeason(b.title, b.description);
     return aIn === bIn ? 0 : aIn ? -1 : 1;
   });
+
+  const { containerRef: listingsRef, activeId: activeListingId } = useMobileScrollActive(
+    visibleListings.map((listing) => listing.id)
+  );
+
+  const rankByListingId = new Map<string, number>();
+  (rankingData?.items ?? [])
+    .filter((item) => item.offerCount > 0)
+    .forEach((item, index) => {
+      rankByListingId.set(item.listing.id, index + 1);
+    });
 
   return (
     <div className="min-h-screen bg-background">
@@ -175,11 +194,13 @@ export function Marketplace() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div ref={listingsRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mobile-vertical-carousel">
             {visibleListings.map((listing) => (
               <ListingCard
                 key={listing.id}
                 listing={listing}
+                mobileActive={activeListingId === listing.id}
+                rank={rankByListingId.get(listing.id) ?? null}
                 onClick={() => navigate(`/listing/${listing.id}`)}
               />
             ))}

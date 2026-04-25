@@ -343,10 +343,100 @@ const seedTempUserRatings = async () => {
   }
 };
 
+// Seed offers on tempUser's listings so they appear in community rankings.
+const seedTempUserListingOffers = async () => {
+  try {
+    const supabase = getServiceRoleClient();
+    const targetEmail = 'tempUser@share-crops.com';
+    const raterEmail = 'gilbertjanderson@gmail.com';
+
+    let tempUserId: string | null = null;
+    let raterUserId: string | null = null;
+
+    for (let page = 1; page <= 10 && (!tempUserId || !raterUserId); page++) {
+      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
+      if (error || !data?.users?.length) break;
+      for (const authUser of data.users) {
+        const email = authUser.email?.toLowerCase();
+        if (!tempUserId && email === targetEmail.toLowerCase()) tempUserId = authUser.id;
+        if (!raterUserId && email === raterEmail.toLowerCase()) raterUserId = authUser.id;
+      }
+    }
+
+    if (!tempUserId) {
+      console.log('tempUser not found; skipping listing offer seed');
+      return;
+    }
+    if (!raterUserId) raterUserId = 'seed-buyer-gilbert';
+
+    // Find all active listings owned by tempUser
+    const allListings = await kv.getByPrefix('listing:community:');
+    const tempUserListings = allListings.filter(
+      (l: any) => l && typeof l === 'object' && l.sellerId === tempUserId && l.status === 'active'
+    );
+
+    if (!tempUserListings.length) {
+      console.log('No tempUser listings found; skipping listing offer seed');
+      return;
+    }
+
+    // Seed buyers to distribute offers across multiple "users" for realistic rankings
+    const seedBuyers = [
+      raterUserId,
+      'seed-buyer-neighbor-1',
+      'seed-buyer-neighbor-2',
+      'seed-buyer-neighbor-3',
+    ];
+
+    const seedOfferedProduce = [
+      '1 dozen eggs',
+      'fresh herbs bundle',
+      '3 lbs carrots',
+      '2 lbs cherry tomatoes',
+    ];
+
+    let seededCount = 0;
+    for (let li = 0; li < tempUserListings.length; li++) {
+      const listing = tempUserListings[li];
+      // Give each listing a varying number of offers so ranks differ (2–4 offers each)
+      const offerCount = 2 + (li % 3);
+      for (let oi = 0; oi < offerCount; oi++) {
+        const buyerId = seedBuyers[oi % seedBuyers.length];
+        // Deterministic offer ID so this is idempotent across restarts
+        const offerId = `seed-offer-rank-${listing.id}-${oi}`;
+        const existing = await kv.get(`offer:${offerId}`);
+        if (existing) continue;
+
+        const offer = {
+          id: offerId,
+          listingId: listing.id,
+          buyerId,
+          sellerId: tempUserId,
+          offeredProduce: seedOfferedProduce[oi % seedOfferedProduce.length],
+          message: 'Interested in a trade!',
+          status: 'pending',
+          createdAt: new Date(Date.now() - (li * 12 + oi * 3) * 60 * 60 * 1000).toISOString(),
+        };
+
+        await kv.set(`offer:${offerId}`, offer);
+        await kv.set(`offer:listing:${listing.id}:${offerId}`, offer);
+        await kv.set(`offer:buyer:${buyerId}:${offerId}`, offer);
+        await kv.set(`offer:seller:${tempUserId}:${offerId}`, offer);
+        seededCount++;
+      }
+    }
+
+    console.log(`Seeded ${seededCount} ranking offers across ${tempUserListings.length} tempUser listings`);
+  } catch (error) {
+    console.error('Failed to seed tempUser listing offers:', error);
+  }
+};
+
 // Initialize on startup
 initStorage();
 initMockData();
 seedTempUserRatings();
+seedTempUserListingOffers();
 
 // Helper: Get authenticated user
 const getAuthUser = async (authHeader: string | null) => {
@@ -1012,13 +1102,17 @@ app.get("/make-server-dd877831/listings/:id", async (c) => {
       return c.json({ error: "Listing not found" }, 404);
     }
     
-    // Use the same source as the list endpoint. This avoids stale/corrupted
-    // primary keys and keeps detail fetch behavior consistent with listing feed.
+    // Prefer canonical listing key first; fallback to community index for legacy data.
     let listing: any = null;
     try {
-      const allCommunityListings = await kv.getByPrefix('listing:community:');
-      if (Array.isArray(allCommunityListings)) {
-        listing = allCommunityListings.find((l: any) => l && typeof l === 'object' && l.id === id) || null;
+      const primaryListing = await kv.get(`listing:${id}`);
+      if (primaryListing && typeof primaryListing === 'object') {
+        listing = primaryListing;
+      } else {
+        const allCommunityListings = await kv.getByPrefix('listing:community:');
+        if (Array.isArray(allCommunityListings)) {
+          listing = allCommunityListings.find((l: any) => l && typeof l === 'object' && l.id === id) || null;
+        }
       }
     } catch (searchError) {
       console.error(`[GET /listings/:id] Community index search failed:`, searchError);

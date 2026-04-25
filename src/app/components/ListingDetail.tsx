@@ -42,6 +42,13 @@ export function ListingDetail() {
   });
   const listing: Listing | null = data?.listing ?? null;
 
+  const { data: rankingData } = useQuery({
+    queryKey: ['trending', listing?.zipCode],
+    queryFn: () => API.getTrendingByZip(listing!.zipCode),
+    enabled: !!listing?.zipCode,
+    staleTime: 60_000,
+  });
+
   const handleStartChat = async () => {
     if (!listing) return;
     try {
@@ -75,13 +82,29 @@ export function ListingDetail() {
   if (!listing) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Listing not found</p>
+        <div className="text-center space-y-3">
+          <svg viewBox="0 0 48 48" className="w-16 h-16 mx-auto" fill="none" aria-hidden="true">
+            <circle cx="24" cy="28" r="16" fill="var(--tomato-empty)" />
+            <path
+              d="M24 12V8M20 10.5C20 10.5 21 12 24 12C27 12 28 10.5 28 10.5M18 8C18 8 19 10 22 11M30 8C30 8 29 10 26 11"
+              stroke="#4a7c3f"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+            <circle cx="18" cy="25" r="2" fill="var(--muted-foreground)" opacity="0.5" />
+            <circle cx="30" cy="31" r="1.6" fill="var(--muted-foreground)" opacity="0.4" />
+            <path d="M18 35c2.2-2.2 9.8-2.2 12 0" stroke="var(--muted-foreground)" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <p className="text-muted-foreground">Listing not found</p>
+        </div>
       </div>
     );
   }
 
   const isOwnListing = currentUser?.id === listing.sellerId;
   const inSeason = isProduceInSeason(listing.title, listing.description);
+  const rankedItems = (rankingData?.items ?? []).filter((item) => item.offerCount > 0);
+  const communityRank = rankedItems.findIndex((item) => item.listing.id === listing.id) + 1;
 
   return (
     <div className="min-h-screen bg-background">
@@ -125,6 +148,14 @@ export function ListingDetail() {
                     In Season
                   </span>
                 )}
+                {communityRank > 0 && (
+                  <span className="flex items-center gap-1 bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full border border-primary/20">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
+                    </svg>
+                    Rank #{communityRank}
+                  </span>
+                )}
               </div>
               {listing.quantity && (
                 <p className="text-lg text-muted-foreground mt-1">Quantity: {listing.quantity}</p>
@@ -163,11 +194,13 @@ export function ListingDetail() {
                 </Avatar>
                 <div className="flex-1">
                   <p className="font-medium">{listing.seller.name}</p>
-                  {listing.seller.ratingCount > 0 && (
+                  {listing.seller.ratingCount > 0 ? (
                     <TomatoRatingDisplay
                       rating={listing.seller.rating}
                       count={listing.seller.ratingCount}
                     />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">New seller</span>
                   )}
                 </div>
               </div>

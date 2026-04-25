@@ -20,8 +20,19 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'desktop-chrome',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 5'] },
+      // Skip the API diagnostic test — it has no UI and provides no extra signal on mobile
+      testIgnore: ['**/debug-api.spec.ts'],
+    },
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 14'] },
+      testIgnore: ['**/debug-api.spec.ts'],
     },
   ],
 });

@@ -9,6 +9,7 @@ import { Input } from './ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { TomatoLoader } from './ui/tomato-loader';
 import { ThreadCard } from './ThreadCard';
+import { useMobileScrollActive } from '../hooks/useMobileScrollActive';
 
 export function ChatList() {
   const navigate = useNavigate();
@@ -20,6 +21,9 @@ export function ChatList() {
     queryFn: () => API.getThreads(),
   });
   const threads: Thread[] = data?.threads ?? [];
+  const { containerRef: threadsRef, activeId: activeThreadId } = useMobileScrollActive(
+    threads.map((thread) => thread.id)
+  );
 
   useEffect(() => {
     const channel = supabase
@@ -61,12 +65,13 @@ export function ChatList() {
             <p className="text-sm text-muted-foreground">Start a conversation from a listing</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div ref={threadsRef} className="space-y-2 mobile-vertical-carousel">
             {threads.map((thread) => (
               <ThreadCard
                 key={thread.id}
                 thread={thread}
                 otherUserId={getOtherUserId(thread)}
+                mobileActive={activeThreadId === thread.id}
                 onClick={() => navigate(`/messages/${thread.id}`)}
               />
             ))}

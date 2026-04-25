@@ -38,7 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading: false,
       });
     } catch {
-      setState({ isAuthenticated: true, hasCompletedSetup: false, loading: false });
+      AuthManager.clearToken();
+      setState({ isAuthenticated: false, hasCompletedSetup: false, loading: false });
     }
   }, []);
 

@@ -56,3 +56,4 @@ share-crops-app/
 *.pem
 *.key
 !public/**
+node_modules

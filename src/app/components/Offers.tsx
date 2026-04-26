@@ -255,7 +255,7 @@ export function Offers() {
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
-          <h1 className="text-2xl font-bold">Offers</h1>
+          <h1 className="text-2xl font-bold">My Offers</h1>
 
           <div className="flex gap-2">
             <Button

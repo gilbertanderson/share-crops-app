@@ -69,7 +69,7 @@ export function ListingCard({ listing, onClick, mobileActive = false, rank = nul
           <img
             src={listing.photos[0]}
             alt={listing.title}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover${listing.status === 'completed' ? ' opacity-60' : ''}`}
             loading="lazy"
           />
         ) : (
@@ -78,6 +78,14 @@ export function ListingCard({ listing, onClick, mobileActive = false, rank = nul
               <path d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z" />
             </svg>
           </div>
+        )}
+        {listing.status === 'completed' && (
+          <span className="absolute bottom-2 left-2 z-[1] flex items-center gap-1 bg-green-600 text-white text-xs font-semibold px-2.5 py-1 rounded-full shadow-md">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7 11l3.5 3.5L17 8" />
+            </svg>
+            Exchanged
+          </span>
         )}
       </div>
       <CardContent className="p-4 space-y-2">

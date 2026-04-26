@@ -1,17 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function login(page: Page, email = 'buyer@example.com', password = 'Test123') {
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Log In' }).click();
+  await expect(
+    page.getByRole('heading', { name: /marketplace/i })
+      .or(page.getByText(/choose a community/i))
+  ).toBeVisible({ timeout: 30000 });
+}
 
 test.describe('Rating System', () => {
   // Test 1: Users can see ratings on seller profiles
   test('buyer can view seller ratings on marketplace', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByLabel('Email').fill('buyer@example.com');
-    await page.getByLabel('Password').fill('Test123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    // Wait for navigation
-    await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
+    await login(page);
 
     // Navigate to Home/Marketplace (should already be there)
     await page.waitForTimeout(1000);
@@ -25,15 +28,7 @@ test.describe('Rating System', () => {
 
   // Test 2: Users can see ratings on listing detail
   test('buyer can view seller ratings on listing detail', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByLabel('Email').fill('buyer@example.com');
-    await page.getByLabel('Password').fill('Test123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    // Wait for navigation
-    await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
+    await login(page);
 
     // Navigate to Home tab
     const homeButton = page.getByRole('button', { name: /home/i }).first();
@@ -58,15 +53,7 @@ test.describe('Rating System', () => {
 
   // Test 3: Buyer can submit a rating with selected tomatoes
   test('buyer can submit a rating with selected tomatoes', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByLabel('Email').fill('buyer@example.com');
-    await page.getByLabel('Password').fill('Test123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    // Wait for navigation
-    await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
+    await login(page);
 
     // Navigate to Offers tab
     const offersButton = page.getByRole('button', { name: /offers/i }).first();
@@ -115,15 +102,7 @@ test.describe('Rating System', () => {
 
   // Test 4: Buyer can submit rating without comment
   test('buyer can submit a rating without comment', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByLabel('Email').fill('buyer@example.com');
-    await page.getByLabel('Password').fill('Test123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    // Wait for navigation
-    await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
+    await login(page);
 
     // Navigate to Offers
     const offersButton = page.getByRole('button', { name: /offers/i }).first();
@@ -165,15 +144,7 @@ test.describe('Rating System', () => {
 
   // Test 5: User must select rating before submitting
   test('rating dialog requires selecting a rating', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByLabel('Email').fill('buyer@example.com');
-    await page.getByLabel('Password').fill('Test123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    // Wait for navigation
-    await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
+    await login(page);
 
     // Navigate to Offers
     const offersButton = page.getByRole('button', { name: /offers/i }).first();
@@ -209,15 +180,7 @@ test.describe('Rating System', () => {
 
   // Test 6: User can change rating selection before submitting
   test('buyer can change rating selection in dialog', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByLabel('Email').fill('buyer@example.com');
-    await page.getByLabel('Password').fill('Test123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    // Wait for navigation
-    await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
+    await login(page);
 
     // Navigate to Offers
     const offersButton = page.getByRole('button', { name: /offers/i }).first();
@@ -266,15 +229,7 @@ test.describe('Rating System', () => {
 
   // Test 7: Ratings persist and appear on user profile
   test('submitted ratings persist on user profile', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByLabel('Email').fill('seller@example.com');
-    await page.getByLabel('Password').fill('Test123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    // Wait for navigation
-    await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
+    await login(page, 'seller@example.com', 'Test123');
 
     // Navigate to Profile
     const profileButton = page.getByRole('button', { name: /profile/i }).first();
@@ -298,15 +253,7 @@ test.describe('Rating System', () => {
 
   // Test 8: Rating scale displays correctly (1-5 tomatoes)
   test('rating scale displays 5 tomato options', async ({ page }) => {
-    await page.goto('/');
-
-    // Login
-    await page.getByLabel('Email').fill('buyer@example.com');
-    await page.getByLabel('Password').fill('Test123');
-    await page.getByRole('button', { name: 'Log In' }).click();
-
-    // Wait for navigation
-    await page.waitForURL('/', { timeout: 10000 }).catch(() => {});
+    await login(page);
 
     // Navigate to Offers
     const offersButton = page.getByRole('button', { name: /offers/i }).first();

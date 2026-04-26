@@ -1,11 +1,24 @@
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+
+const EMAIL = 'tempUser@share-crops.com';
+const PASSWORD = 'tempUser1!';
 
 test('full app walkthrough - complete end-to-end flow', async ({ page }) => {
-  // 1. Load app
+  // 1. Login
   console.log('🔓 Step 1: Load app');
-  await page.goto('/');
-  await page.waitForLoadState('networkidle');
-  await page.waitForTimeout(2000);
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(EMAIL);
+  await page.getByLabel('Password').fill(PASSWORD);
+  await page.getByRole('button', { name: /^log in$/i }).click();
+  await expect(
+    page.getByRole('heading', { name: /marketplace/i })
+      .or(page.getByText(/choose a community/i))
+  ).toBeVisible({ timeout: 30000 });
+
+  if (page.url().includes('/community-select')) {
+    await page.getByRole('button', { name: /^enter$/i }).first().click();
+    await expect(page.getByRole('heading', { name: /marketplace/i })).toBeVisible({ timeout: 30000 });
+  }
 
   // 2. Navigate to marketplace
   console.log('🏪 Step 2: Navigate to marketplace');

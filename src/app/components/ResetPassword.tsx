@@ -50,15 +50,15 @@ export function ResetPassword() {
             setError('This reset link has expired or already been used. Please request a new one.');
             setTokenState({ status: 'invalid' });
           } else {
-            // Clean the code from the URL so a page refresh doesn't re-use it
-            window.history.replaceState({}, '', '/reset-password');
             setTokenState({ status: 'pkce_ready' });
+            // Clean the code param so a page refresh doesn't re-use it
+            navigate('/reset-password', { replace: true });
           }
         });
     } else if (accessToken && tokenType === 'recovery') {
-      // Implicit flow: access_token + type=recovery in hash
-      window.history.replaceState({}, '', '/reset-password');
+      // Implicit flow: access_token + type=recovery in hash — capture token first, then clean URL
       setTokenState({ status: 'direct', token: accessToken });
+      navigate('/reset-password', { replace: true });
     } else {
       setError('Invalid or expired reset link. Please request a new one.');
       setTokenState({ status: 'invalid' });

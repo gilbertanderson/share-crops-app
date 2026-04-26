@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { API, AuthManager } from '../../utils/api';
+import { API } from '../../utils/api';
 import type { Offer, Listing, User } from '../../types';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -216,7 +216,6 @@ function OfferCard({ offer, viewAs, onAction, queryClient }: {
       {showRatingDialog && (
         <SubmitRatingDialog
           offerId={offer.id}
-          ratedUserId={viewAs === 'buyer' ? offer.sellerId : offer.buyerId}
           onClose={() => setShowRatingDialog(false)}
           onSuccess={() => {
             setShowRatingDialog(false);

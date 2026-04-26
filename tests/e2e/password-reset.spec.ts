@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Password Reset Flow', () => {
   test('should show forgot password link on login page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
 
     await expect(page.getByRole('heading', { name: 'Share Crops' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Log In' })).toBeVisible();
@@ -12,7 +12,7 @@ test.describe('Password Reset Flow', () => {
   });
 
   test('should navigate to password reset form when clicking forgot password', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
 
     // Find and click the "Forgot password?" link
     const forgotLink = page.getByRole('button', { name: 'Forgot password?' });
@@ -30,7 +30,7 @@ test.describe('Password Reset Flow', () => {
   });
 
   test('should allow user to enter email and request password reset', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
 
     // Click forgot password link
     await page.getByRole('button', { name: 'Forgot password?' }).click();
@@ -51,7 +51,7 @@ test.describe('Password Reset Flow', () => {
   });
 
   test('should allow returning to login from reset form', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
 
     // Navigate to reset form
     await page.getByRole('button', { name: 'Forgot password?' }).click();
@@ -67,7 +67,7 @@ test.describe('Password Reset Flow', () => {
   });
 
   test('should return to login after successful reset request', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
 
     // Navigate to reset form
     await page.getByRole('button', { name: 'Forgot password?' }).click();
@@ -89,7 +89,7 @@ test.describe('Password Reset Flow', () => {
   });
 
   test('should maintain email input when toggling between login and forgot password', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
 
     const testEmail = `test-${Date.now()}@example.com`;
 

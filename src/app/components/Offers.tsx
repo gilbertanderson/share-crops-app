@@ -183,6 +183,17 @@ function OfferCard({ offer, viewAs, onAction, queryClient }: {
               </Button>
             )}
 
+            {offer.status === 'completed' && hasRatedThisOffer && (
+              <Button
+                disabled
+                size="sm"
+                variant="outline"
+                className="flex-1 text-muted-foreground"
+              >
+                ✓ You've rated this
+              </Button>
+            )}
+
             {viewAs === 'buyer' && offer.status !== 'completed' && offer.status !== 'declined' && (
               <Button
                 onClick={() => setShowDeleteConfirm(true)}

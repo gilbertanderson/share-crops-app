@@ -32,7 +32,10 @@ export function ListingDetail() {
   const queryClient = useQueryClient();
   const [showOfferDialog, setShowOfferDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRelistConfirm, setShowRelistConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [relistError, setRelistError] = useState('');
+  const [relistLoading, setRelistLoading] = useState(false);
   const [offerSuccess, setOfferSuccess] = useState(false);
   const currentUser = AuthManager.getUser();
   const { isAdmin } = useAuth();
@@ -70,6 +73,29 @@ export function ListingDetail() {
       navigate('/marketplace');
     } catch (err: unknown) {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete listing');
+    }
+  };
+
+  const handleRelistItem = async () => {
+    if (!listing) return;
+    setRelistLoading(true);
+    setRelistError('');
+    try {
+      const newListing = await API.createListing({
+        title: listing.title,
+        description: listing.description,
+        quantity: listing.quantity ?? '',
+        photos: listing.photos,
+        lookingFor: listing.lookingFor ?? '',
+        expiresInDays: 30,
+      });
+      queryClient.invalidateQueries({ queryKey: ['listings'] });
+      setShowRelistConfirm(false);
+      navigate(`/listing/${newListing.listing.id}`);
+    } catch (err: unknown) {
+      setRelistError(err instanceof Error ? err.message : 'Failed to relist item');
+    } finally {
+      setRelistLoading(false);
     }
   };
 
@@ -144,6 +170,14 @@ export function ListingDetail() {
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold">{listing.title}</h1>
+                {listing.status === 'completed' && (
+                  <span className="flex items-center gap-1 bg-success text-success-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M17.293 3.293a1 1 0 011.414 1.414l-10 10a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l9.293-9.293z" />
+                    </svg>
+                    Exchanged
+                  </span>
+                )}
                 {inSeason && (
                   <span className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
                     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -220,23 +254,37 @@ export function ListingDetail() {
               </svg>
               Message
             </Button>
-            <Button
-              onClick={() => setShowOfferDialog(true)}
-              className="flex-1 bg-primary hover:bg-primary-hover text-primary-foreground"
-            >
-              Make Offer
-            </Button>
+            {listing.status === 'active' ? (
+              <Button
+                onClick={() => setShowOfferDialog(true)}
+                className="flex-1 bg-primary hover:bg-primary-hover text-primary-foreground"
+              >
+                Make Offer
+              </Button>
+            ) : (
+              <Button disabled className="flex-1" variant="outline">
+                {listing.status === 'completed' ? 'Already Exchanged' : 'Listing Expired'}
+              </Button>
+            )}
           </div>
         )}
 
         {isOwnListing && (
-          <div className="sticky bottom-4">
+          <div className="sticky bottom-4 space-y-2">
+            {listing.status === 'completed' ? (
+              <Button
+                onClick={() => setShowRelistConfirm(true)}
+                className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
+              >
+                Relist Item
+              </Button>
+            ) : null}
             <Button
               onClick={() => setShowDeleteConfirm(true)}
               variant="outline"
               className="w-full border-error text-error hover:bg-error/10"
             >
-              Delete Listing
+              {listing.status === 'completed' ? 'Archive Listing' : 'Delete Listing'}
             </Button>
           </div>
         )}
@@ -260,6 +308,30 @@ export function ListingDetail() {
               className="bg-error text-error-foreground hover:bg-error/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showRelistConfirm} onOpenChange={setShowRelistConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Relist this item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Create a new listing with the same details to start a new exchange chain. This is perfect for bartering towards a specific goal!
+              {relistError && (
+                <span className="block mt-2 text-error">{relistError}</span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={relistLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRelistItem}
+              disabled={relistLoading}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground"
+            >
+              {relistLoading ? 'Creating...' : 'Relist Item'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

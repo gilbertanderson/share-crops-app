@@ -306,9 +306,14 @@ export function Marketplace() {
       rankByListingId.set(item.listing.id, index + 1);
     });
 
+  const createdAtByListingId = new Map<string, number>();
+  filteredListings.forEach((listing) => {
+    createdAtByListingId.set(listing.id, new Date(listing.createdAt).getTime());
+  });
+
   const visibleListings = [...filteredListings].sort((a, b) => {
-    if (sort === 'date-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    if (sort === 'date-asc')  return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    if (sort === 'date-desc') return (createdAtByListingId.get(b.id) ?? 0) - (createdAtByListingId.get(a.id) ?? 0);
+    if (sort === 'date-asc')  return (createdAtByListingId.get(a.id) ?? 0) - (createdAtByListingId.get(b.id) ?? 0);
     if (sort === 'alpha-asc') return a.title.localeCompare(b.title);
     if (sort === 'alpha-desc') return b.title.localeCompare(a.title);
     // Default: in-season → community rank → A–Z

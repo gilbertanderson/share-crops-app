@@ -69,7 +69,7 @@ export function Profile() {
     queries: communities.map((c) => ({
       queryKey: ['community-members-preview', c.id],
       queryFn: () => API.getCommunityMembersPreview(c.id),
-      enabled: communities.length > 0,
+      enabled: !!c.id,
       staleTime: 60_000,
     })),
   });

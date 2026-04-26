@@ -5,52 +5,6 @@ import * as kv from "./kv_store.tsx";
 import * as security from "./security.tsx";
 import { createClient } from "npm:@supabase/supabase-js";
 
-const app = new Hono();
-
-// Enable logger
-app.use('*', logger(console.log));
-
-// Security: Add hardened CORS with specific origin validation
-app.use(
-  "/*",
-  cors({
-    origin: CORS_ORIGINS,
-    allowHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    exposeHeaders: ["Content-Length", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
-    maxAge: 600,
-    credentials: true,
-  }),
-);
-
-// Security: Add security headers middleware
-app.use('/*', async (c, next) => {
-  const headers = security.getSecurityHeaders();
-  Object.entries(headers).forEach(([key, value]) => {
-    c.header(key, value as string);
-  });
-  await next();
-});
-
-// Security: Rate limiting middleware
-app.use('/*', async (c, next) => {
-  const { allowed, remaining, resetTime } = security.rateLimit(c.req);
-
-  c.header('X-RateLimit-Remaining', remaining.toString());
-  c.header('X-RateLimit-Reset', resetTime.toString());
-
-  if (!allowed) {
-    security.logSecurityEvent('rate_limit_exceeded', 'medium', {
-      ip: security.getClientIp(c.req),
-      path: c.req.path,
-      timestamp: new Date().toISOString(),
-    });
-    return c.json({ error: 'Too many requests. Please try again later.' }, 429);
-  }
-
-  await next();
-});
-
 const ADMIN_EMAIL = (() => {
   const adminEmail = Deno.env.get('ADMIN_EMAIL');
   if (!adminEmail || adminEmail.trim() === '') {
@@ -102,6 +56,52 @@ const DEFAULT_ORIGIN = (() => {
 })();
 
 const API_PREFIX = `make-server-${APP_ID}`;
+
+const app = new Hono();
+
+// Enable logger
+app.use('*', logger(console.log));
+
+// Security: Add hardened CORS with specific origin validation
+app.use(
+  "/*",
+  cors({
+    origin: CORS_ORIGINS,
+    allowHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    exposeHeaders: ["Content-Length", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
+    maxAge: 600,
+    credentials: true,
+  }),
+);
+
+// Security: Add security headers middleware
+app.use('/*', async (c, next) => {
+  const headers = security.getSecurityHeaders();
+  Object.entries(headers).forEach(([key, value]) => {
+    c.header(key, value as string);
+  });
+  await next();
+});
+
+// Security: Rate limiting middleware
+app.use('/*', async (c, next) => {
+  const { allowed, remaining, resetTime } = security.rateLimit(c.req);
+
+  c.header('X-RateLimit-Remaining', remaining.toString());
+  c.header('X-RateLimit-Reset', resetTime.toString());
+
+  if (!allowed) {
+    security.logSecurityEvent('rate_limit_exceeded', 'medium', {
+      ip: security.getClientIp(c.req),
+      path: c.req.path,
+      timestamp: new Date().toISOString(),
+    });
+    return c.json({ error: 'Too many requests. Please try again later.' }, 429);
+  }
+
+  await next();
+});
 
 // Supabase clients
 const getServiceRoleClient = () => createClient(

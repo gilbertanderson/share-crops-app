@@ -61,7 +61,7 @@ function TrendingSection({
 
 export function Marketplace() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' | 'community'>('community');
+  const [filter, setFilter] = useState<'zip' | 'community'>('community');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreate, setShowCreate] = useState(false);
 
@@ -75,7 +75,7 @@ export function Marketplace() {
     queryKey: ['listings', filter, community?.id ?? null],
     queryFn: () =>
       API.getListings(filter === 'community' && community ? { communityId: community.id } : {}),
-    enabled: filter === 'all' || !!community,
+    enabled: filter === 'zip' || !!community,
   });
   const listings: Listing[] = listingsData?.listings ?? [];
 
@@ -152,10 +152,10 @@ export function Marketplace() {
                 {community.name}
               </Button>
               <Button
-                variant={filter === 'all' ? 'default' : 'outline'}
+                variant={filter === 'zip' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFilter('all')}
-                className={filter === 'all' ? 'bg-primary text-primary-foreground' : ''}
+                onClick={() => setFilter('zip')}
+                className={filter === 'zip' ? 'bg-primary text-primary-foreground' : ''}
               >
                 All ZIP {community.zipCode}
               </Button>
@@ -185,7 +185,7 @@ export function Marketplace() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {filter === 'all' && community?.id && (
+        {filter === 'zip' && community?.id && (
           <TrendingSection
             zipCode={community.zipCode}
             communityId={community.id}

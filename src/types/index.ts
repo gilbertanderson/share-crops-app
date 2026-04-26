@@ -1,3 +1,5 @@
+export type UserRole = 'admin' | 'general';
+
 export interface User {
   id: string;
   email: string;
@@ -7,6 +9,7 @@ export interface User {
   profilePhotoUrl?: string;
   rating: number;
   ratingCount: number;
+  role: UserRole;
   createdAt: string;
 }
 

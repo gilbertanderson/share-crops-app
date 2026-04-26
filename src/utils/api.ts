@@ -223,6 +223,20 @@ export class API {
     });
   }
 
+  static async getAllCommunities(): Promise<{ communities: Community[] }> {
+    return this.request('/communities/all');
+  }
+
+  static async getCommunityMembers(communityId: string): Promise<{ members: User[] }> {
+    return this.request(`/communities/${communityId}/members`);
+  }
+
+  static async removeCommunityMember(communityId: string, userId: string): Promise<{ success: boolean }> {
+    return this.request(`/communities/${communityId}/members/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Listings
   static async createListing(data: {
     title: string;
@@ -310,6 +324,10 @@ export class API {
     return this.request(`/chat/messages/${threadId}`);
   }
 
+  static async deleteMessage(messageId: string): Promise<{ success: boolean }> {
+    return this.request(`/chat/messages/${messageId}`, { method: 'DELETE' });
+  }
+
   // Ratings
   static async createRating(offerId: string, rating: number, comment?: string): Promise<{ rating: Rating }> {
     return this.request('/ratings', {
@@ -320,6 +338,10 @@ export class API {
 
   static async getUserRatings(userId: string): Promise<{ ratings: Rating[] }> {
     return this.request(`/ratings/user/${userId}`);
+  }
+
+  static async deleteRating(ratingId: string): Promise<{ success: boolean }> {
+    return this.request(`/ratings/${ratingId}`, { method: 'DELETE' });
   }
 
   // Profile

@@ -10,6 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 import { TomatoLoader } from './ui/tomato-loader';
 import { ThreadCard } from './ThreadCard';
 import { useMobileScrollActive } from '../hooks/useMobileScrollActive';
+import { useAuth } from '../context/AuthContext';
 
 export function ChatList() {
   const navigate = useNavigate();
@@ -88,8 +89,10 @@ export function ChatThread() {
   const queryClient = useQueryClient();
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentUser = AuthManager.getUser();
+  const { isAdmin } = useAuth();
 
   const { data: messagesData, isLoading } = useQuery({
     queryKey: ['messages', threadId],
@@ -133,6 +136,18 @@ export function ChatThread() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleDeleteMessage = async (messageId: string) => {
+    setDeletingMessageId(messageId);
+    try {
+      await API.deleteMessage(messageId);
+      queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
+    } catch (err) {
+      console.error('Failed to delete message', err);
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -193,10 +208,24 @@ export function ChatThread() {
             <div className="space-y-4">
               {messages.map((message) => {
                 const isOwn = message.senderId === currentUser?.id;
+                const canDelete = isAdmin;
                 return (
-                  <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  <div key={message.id} className={`flex items-end gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                    {canDelete && !isOwn && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(message.id)}
+                        disabled={deletingMessageId === message.id}
+                        aria-label="Delete message"
+                        className="shrink-0 p-1 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
                     <div
-                      className={`max-w-[75%] rounded-lg px-4 py-2 ${
+                      className={`group relative max-w-[75%] rounded-lg px-4 py-2 ${
                         isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
                       }`}
                     >
@@ -205,6 +234,19 @@ export function ChatThread() {
                         {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
+                    {canDelete && isOwn && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(message.id)}
+                        disabled={deletingMessageId === message.id}
+                        aria-label="Delete message"
+                        className="shrink-0 p-1 text-primary-foreground/60 hover:text-destructive transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 );
               })}

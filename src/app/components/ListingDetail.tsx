@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API, AuthManager } from '../../utils/api';
+import { useAuth } from '../context/AuthContext';
 import type { Listing, Offer } from '../../types';
 import { isProduceInSeason } from '../../utils/seasonalProduce';
 import { Button } from './ui/button';
@@ -34,6 +35,7 @@ export function ListingDetail() {
   const [deleteError, setDeleteError] = useState('');
   const [offerSuccess, setOfferSuccess] = useState(false);
   const currentUser = AuthManager.getUser();
+  const { isAdmin } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ['listing', listingId],
@@ -101,7 +103,7 @@ export function ListingDetail() {
     );
   }
 
-  const isOwnListing = currentUser?.id === listing.sellerId;
+  const isOwnListing = currentUser?.id === listing.sellerId || isAdmin;
   const inSeason = isProduceInSeason(listing.title, listing.description);
   const rankedItems = (rankingData?.items ?? []).filter(
     (item) => item.offerCount > 0 && item.listing.communityId === listing.communityId
@@ -127,7 +129,7 @@ export function ListingDetail() {
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {listing.photos && listing.photos.length > 0 && (
-          <div className="w-[398px] h-[398px] mx-auto rounded-xl overflow-hidden bg-muted">
+          <div className="w-full max-w-[398px] mx-auto aspect-square rounded-xl overflow-hidden bg-muted">
             <img
               src={listing.photos[0]}
               alt={listing.title}

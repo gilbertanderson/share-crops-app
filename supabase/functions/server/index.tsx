@@ -51,6 +51,8 @@ app.use('/*', async (c, next) => {
   await next();
 });
 
+const ADMIN_EMAIL = 'gilbertjanderson@gmail.com';
+
 // Supabase clients
 const getServiceRoleClient = () => createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -473,6 +475,11 @@ const getAuthUser = async (authHeader: string | null) => {
   }
 };
 
+const getUserRole = async (userId: string): Promise<string> => {
+  const profile = await kv.get(`user:${userId}`);
+  return profile?.role ?? 'general';
+};
+
 const MAX_LISTING_EXPIRATION_DAYS = 30;
 
 const getCommunityMembershipKey = (userId: string, communityId: string) =>
@@ -649,6 +656,7 @@ app.post("/make-server-dd877831/auth/signup", async (c) => {
       profilePhotoUrl: '',
       rating: 0,
       ratingCount: 0,
+      role: email.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'general',
       createdAt: new Date().toISOString(),
     });
 
@@ -773,6 +781,13 @@ app.get("/make-server-dd877831/auth/me", async (c) => {
   }
 
   const profile = await kv.get(`user:${user.id}`);
+
+  // Backfill role for accounts created before roles were introduced
+  if (profile && profile.role === undefined) {
+    profile.role = profile.email?.toLowerCase() === ADMIN_EMAIL ? 'admin' : 'general';
+    await kv.set(`user:${user.id}`, profile);
+  }
+
   return c.json({ user: profile });
 });
 
@@ -848,6 +863,7 @@ app.post("/make-server-dd877831/communities/join", async (c) => {
 
     await kv.set(`user:${user.id}:community`, communityId);
     await addMembership(user.id, communityId);
+    await kv.set(`community:member:${communityId}:${user.id}`, { userId: user.id, communityId, joinedAt: new Date().toISOString() });
 
     // Increment member count
     community.memberCount = (community.memberCount || 1) + 1;
@@ -973,6 +989,7 @@ app.delete("/make-server-dd877831/communities/mine/:communityId", async (c) => {
     }
 
     await kv.del(membershipKey);
+    await kv.del(`community:member:${communityId}:${user.id}`);
 
     const activeCommunityId = await kv.get(`user:${user.id}:community`);
     if (activeCommunityId === communityId) {
@@ -988,6 +1005,87 @@ app.delete("/make-server-dd877831/communities/mine/:communityId", async (c) => {
   } catch (error) {
     console.error("Leave community error:", error);
     return c.json({ error: "Failed to leave community" }, 500);
+  }
+});
+
+app.get("/make-server-dd877831/communities/:communityId/members", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  const role = await getUserRole(user.id);
+  if (role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+
+  try {
+    const communityId = c.req.param('communityId');
+    const memberEntries = await kv.getByPrefix(`community:member:${communityId}:`);
+    const members = await Promise.all(
+      memberEntries.map(async (entry: any) => {
+        const profile = await kv.get(`user:${entry.userId}`);
+        return profile ? { ...profile, joinedAt: entry.joinedAt } : null;
+      })
+    );
+    return c.json({ members: members.filter(Boolean) });
+  } catch (error) {
+    console.error("Get community members error:", error);
+    return c.json({ error: "Failed to get members" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/communities/:communityId/members/:userId", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  const role = await getUserRole(user.id);
+  if (role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+
+  try {
+    const communityId = c.req.param('communityId');
+    const targetUserId = c.req.param('userId');
+
+    const membershipKey = getCommunityMembershipKey(targetUserId, communityId);
+    const membership = await kv.get(membershipKey);
+    if (!membership) return c.json({ error: "User is not a member of this community" }, 404);
+
+    const community = await kv.get(`community:id:${communityId}`);
+    if (community) {
+      community.memberCount = Math.max((community.memberCount || 1) - 1, 0);
+      await kv.set(`community:id:${communityId}`, community);
+      await kv.set(`community:${community.zipCode}:${community.name.toLowerCase().trim()}`, community);
+    }
+
+    await kv.del(membershipKey);
+    await kv.del(`community:member:${communityId}:${targetUserId}`);
+
+    const activeCommunityId = await kv.get(`user:${targetUserId}:community`);
+    if (activeCommunityId === communityId) {
+      const remainingIds = await getMembershipCommunityIds(targetUserId);
+      if (remainingIds.length > 0) {
+        await kv.set(`user:${targetUserId}:community`, remainingIds[0]);
+      } else {
+        await kv.del(`user:${targetUserId}:community`);
+      }
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Remove community member error:", error);
+    return c.json({ error: "Failed to remove member" }, 500);
+  }
+});
+
+app.get("/make-server-dd877831/communities/all", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  const role = await getUserRole(user.id);
+  if (role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+
+  try {
+    const allCommunities = await kv.getByPrefix('community:id:');
+    return c.json({ communities: allCommunities.filter(Boolean) });
+  } catch (error) {
+    console.error("Get all communities error:", error);
+    return c.json({ error: "Failed to get communities" }, 500);
   }
 });
 
@@ -1198,7 +1296,8 @@ app.delete("/make-server-dd877831/listings/:id", async (c) => {
       return c.json({ error: "Listing not found" }, 404);
     }
 
-    if (listing.sellerId !== user.id) {
+    const role = await getUserRole(user.id);
+    if (listing.sellerId !== user.id && role !== 'admin') {
       return c.json({ error: "Only the seller can delete this listing" }, 403);
     }
 
@@ -1638,6 +1737,33 @@ app.get("/make-server-dd877831/chat/messages/:threadId", async (c) => {
   }
 });
 
+app.delete("/make-server-dd877831/chat/messages/:messageId", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  try {
+    const messageId = c.req.param('messageId');
+    const message = await kv.get(`message:${messageId}`);
+
+    if (!message || typeof message !== 'object') {
+      return c.json({ error: "Message not found" }, 404);
+    }
+
+    const role = await getUserRole(user.id);
+    if (message.senderId !== user.id && role !== 'admin') {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    await kv.del(`message:${messageId}`);
+    await kv.del(`message:thread:${message.threadId}:${messageId}`);
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Delete message error:", error);
+    return c.json({ error: "Failed to delete message" }, 500);
+  }
+});
+
 // ===== RATING ROUTES =====
 
 app.post("/make-server-dd877831/ratings", async (c) => {
@@ -1715,6 +1841,47 @@ app.get("/make-server-dd877831/ratings/user/:userId", async (c) => {
   } catch (error) {
     console.error("Get user ratings error:", error);
     return c.json({ error: "Failed to get ratings" }, 500);
+  }
+});
+
+app.delete("/make-server-dd877831/ratings/:ratingId", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  try {
+    const ratingId = c.req.param('ratingId');
+    const rating = await kv.get(`rating:${ratingId}`);
+
+    if (!rating || typeof rating !== 'object') {
+      return c.json({ error: "Rating not found" }, 404);
+    }
+
+    const role = await getUserRole(user.id);
+    if (rating.raterUserId !== user.id && role !== 'admin') {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    await kv.del(`rating:${ratingId}`);
+    await kv.del(`rating:${rating.offerId}:${rating.raterUserId}`);
+    await kv.del(`rating:user:${rating.ratedUserId}:${ratingId}`);
+
+    // Recompute aggregate rating for the rated user
+    const remainingRatings = await kv.getByPrefix(`rating:user:${rating.ratedUserId}:`);
+    const ratedUser = await kv.get(`user:${rating.ratedUserId}`);
+    if (ratedUser) {
+      const count = remainingRatings.length;
+      const avg = count > 0
+        ? remainingRatings.reduce((sum: number, r: any) => sum + (r.rating ?? 0), 0) / count
+        : 0;
+      ratedUser.rating = Math.round(avg * 10) / 10;
+      ratedUser.ratingCount = count;
+      await kv.set(`user:${rating.ratedUserId}`, ratedUser);
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Delete rating error:", error);
+    return c.json({ error: "Failed to delete rating" }, 500);
   }
 });
 

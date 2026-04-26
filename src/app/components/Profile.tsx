@@ -27,7 +27,7 @@ import { TomatoLoader } from './ui/tomato-loader';
 
 export function Profile() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [confirmLeaveId, setConfirmLeaveId] = useState<string | null>(null);
   const [leavingCommunityId, setLeavingCommunityId] = useState<string | null>(null);
@@ -64,6 +64,20 @@ export function Profile() {
   });
   const communities: Community[] = communitiesData?.communities ?? [];
   const activeCommunityId: string | null = communitiesData?.activeCommunityId ?? null;
+
+  const [deletingRatingId, setDeletingRatingId] = useState<string | null>(null);
+
+  const handleDeleteRating = async (ratingId: string) => {
+    setDeletingRatingId(ratingId);
+    try {
+      await API.deleteRating(ratingId);
+      queryClient.invalidateQueries({ queryKey: ['my-ratings', user?.id] });
+    } catch (err) {
+      console.error('Failed to delete rating', err);
+    } finally {
+      setDeletingRatingId(null);
+    }
+  };
 
   const handleLeaveCommunity = async () => {
     if (!confirmLeaveId) return;
@@ -235,6 +249,7 @@ export function Profile() {
                       {activeCommunityId === community.id && (
                         <p className="text-xs text-primary mt-1">Active community</p>
                       )}
+                      <p className="text-xs text-muted-foreground mt-0.5">{community.memberCount} {community.memberCount === 1 ? 'member' : 'members'}</p>
                     </div>
                     <Button
                       variant="outline"
@@ -260,9 +275,24 @@ export function Profile() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between">
                     <TomatoRatingDisplay rating={rating.rating} />
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(rating.createdAt).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(rating.createdAt).toLocaleDateString()}
+                      </span>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRating(rating.id)}
+                          disabled={deletingRatingId === rating.id}
+                          aria-label="Delete review"
+                          className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {rating.comment && (
                     <p className="text-sm text-foreground">{rating.comment}</p>

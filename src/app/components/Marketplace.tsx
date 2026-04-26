@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API } from '../../utils/api';
-import type { Listing } from '../../types';
+import type { Listing, User, Community } from '../../types';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -12,6 +12,8 @@ import { TomatoLoader } from './ui/tomato-loader';
 import { ListingCard } from './ListingCard';
 import { isProduceInSeason } from '../../utils/seasonalProduce';
 import { useMobileScrollActive } from '../hooks/useMobileScrollActive';
+import { useAuth } from '../context/AuthContext';
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar';
 
 function TrendingSection({
   zipCode,
@@ -59,11 +61,86 @@ function TrendingSection({
   );
 }
 
+function AdminMembersModal({
+  community,
+  onClose,
+}: {
+  community: Community;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['community-members', community.id],
+    queryFn: () => API.getCommunityMembers(community.id),
+  });
+  const members: User[] = data?.members ?? [];
+
+  const handleRemove = async (userId: string) => {
+    setRemovingId(userId);
+    try {
+      await API.removeCommunityMember(community.id, userId);
+      await refetch();
+      queryClient.invalidateQueries({ queryKey: ['listings'] });
+    } catch (err) {
+      console.error('Failed to remove member', err);
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{community.name} — Members</DialogTitle>
+        </DialogHeader>
+        {isLoading ? (
+          <TomatoLoader label="Loading..." className="py-8" />
+        ) : members.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No members found.</p>
+        ) : (
+          <div className="space-y-2">
+            {members.map((member) => (
+              <div key={member.id} className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar className="w-8 h-8 shrink-0">
+                    <AvatarImage src={member.profilePhotoUrl} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {member.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{member.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRemove(member.id)}
+                  disabled={removingId === member.id}
+                  className="shrink-0 border-error text-error hover:bg-error/10 text-xs"
+                >
+                  {removingId === member.id ? 'Removing...' : 'Remove'}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function Marketplace() {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<'all' | 'community'>('community');
+  const { isAdmin } = useAuth();
+  const [filter, setFilter] = useState<'all' | 'community' | 'global'>('community');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [managingCommunity, setManagingCommunity] = useState<Community | null>(null);
 
   const { data: communityData, isLoading: isCommunityLoading } = useQuery({
     queryKey: ['my-community'],
@@ -74,8 +151,10 @@ export function Marketplace() {
   const { data: listingsData, isLoading: isListingsLoading } = useQuery({
     queryKey: ['listings', filter, community?.id ?? null],
     queryFn: () =>
-      API.getListings(filter === 'community' && community ? { communityId: community.id } : {}),
-    enabled: filter === 'all' || !!community,
+      filter === 'community' && community
+        ? API.getListings({ communityId: community.id })
+        : API.getListings({}),
+    enabled: filter === 'global' || filter === 'all' || !!community,
   });
   const listings: Listing[] = listingsData?.listings ?? [];
 
@@ -88,7 +167,9 @@ export function Marketplace() {
 
   // Avoid flashing empty state before community context resolves and listings query can start.
   const showListingsLoader =
-    isCommunityLoading || (filter === 'community' && communityData === undefined) || isListingsLoading;
+    (filter !== 'global' && isCommunityLoading) ||
+    (filter === 'community' && communityData === undefined) ||
+    isListingsLoading;
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredListings = normalizedQuery
@@ -141,26 +222,51 @@ export function Marketplace() {
             </Button>
           </div>
 
-          {community && (
-            <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {community && (
+              <>
+                <Button
+                  variant={filter === 'community' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilter('community')}
+                  className={filter === 'community' ? 'bg-primary text-primary-foreground' : ''}
+                >
+                  {community.name}
+                </Button>
+                {isAdmin && filter === 'community' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setManagingCommunity(community)}
+                    className="text-muted-foreground hover:text-foreground px-2"
+                    aria-label="Manage community members"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  </Button>
+                )}
+                <Button
+                  variant={filter === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilter('all')}
+                  className={filter === 'all' ? 'bg-primary text-primary-foreground' : ''}
+                >
+                  All ZIP {community.zipCode}
+                </Button>
+              </>
+            )}
+            {isAdmin && (
               <Button
-                variant={filter === 'community' ? 'default' : 'outline'}
+                variant={filter === 'global' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setFilter('community')}
-                className={filter === 'community' ? 'bg-primary text-primary-foreground' : ''}
+                onClick={() => setFilter('global')}
+                className={filter === 'global' ? 'bg-primary text-primary-foreground' : ''}
               >
-                {community.name}
+                All Communities
               </Button>
-              <Button
-                variant={filter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setFilter('all')}
-                className={filter === 'all' ? 'bg-primary text-primary-foreground' : ''}
-              >
-                All ZIP {community.zipCode}
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="relative">
             <Input
@@ -233,6 +339,13 @@ export function Marketplace() {
         <CreateListing
           onClose={() => setShowCreate(false)}
           onSuccess={() => setShowCreate(false)}
+        />
+      )}
+
+      {managingCommunity && (
+        <AdminMembersModal
+          community={managingCommunity}
+          onClose={() => setManagingCommunity(null)}
         />
       )}
     </div>

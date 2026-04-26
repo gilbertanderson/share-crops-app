@@ -7,6 +7,7 @@ interface AuthState {
   isAuthenticated: boolean;
   hasCompletedSetup: boolean;
   communityCount: number;
+  isAdmin: boolean;
   loading: boolean;
 }
 
@@ -22,34 +23,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: false,
     hasCompletedSetup: false,
     communityCount: 0,
+    isAdmin: false,
     loading: true,
   });
 
   const refreshAuth = useCallback(async () => {
     const authenticated = AuthManager.isAuthenticated();
     if (!authenticated) {
-      setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, loading: false });
+      setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, isAdmin: false, loading: false });
       return;
     }
     try {
-      await API.getMe();
+      const { user } = await API.getMe();
       const communitiesData = await API.getMyCommunities();
       const communityCount = communitiesData.communities?.length ?? 0;
       setState({
         isAuthenticated: true,
         hasCompletedSetup: communityCount > 0,
         communityCount,
+        isAdmin: user?.role === 'admin',
         loading: false,
       });
     } catch {
       AuthManager.clearToken();
-      setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, loading: false });
+      setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, isAdmin: false, loading: false });
     }
   }, []);
 
   const logout = useCallback(() => {
     AuthManager.clearToken();
-    setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, loading: false });
+    setState({ isAuthenticated: false, hasCompletedSetup: false, communityCount: 0, isAdmin: false, loading: false });
   }, []);
 
   // Inactivity auto-logout: reset timer on user activity; logout after 30 min idle

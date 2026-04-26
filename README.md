@@ -1,7 +1,7 @@
 
   # Share Crops PWA Development
 
-  This is a code bundle for Share Crops PWA Development. The original project is available at https://www.figma.com/design/Rd1sSXl8jpObDg95G48jNI/Share-Crops-PWA-Development.
+  This is a code bundle for Share Crops PWA Development. The original project MVP is available at https://www.figma.com/design/Rd1sSXl8jpObDg95G48jNI/Share-Crops-PWA-Development.
 
 The production release: https://share-crops-app.vercel.app/login
 

@@ -54,7 +54,7 @@ app.use('/*', async (c, next) => {
 const ADMIN_EMAIL = (() => {
   const adminEmail = Deno.env.get('ADMIN_EMAIL');
   if (!adminEmail || adminEmail.trim() === '') {
-    throw new Error('ADMIN_EMAIL environment variable must be configured');
+    throw new Error('ADMIN_EMAIL environment variable must be configured for proper admin role assignment during user creation; the application will fail to start without it.');
   }
   return adminEmail.toLowerCase();
 })();
@@ -494,14 +494,17 @@ const getAuthUser = async (authHeader: string | null) => {
     return 'general';
   }
 
-  return profile.role;
+  return normalizeUserRole(profile.role);
   }
+};
+
+const normalizeUserRole = (role: unknown): 'admin' | 'general' => {
+  return role === 'admin' || role === 'general' ? role : 'general';
 };
 
 const getUserRole = async (userId: string): Promise<'admin' | 'general'> => {
   const profile = await kv.get(`user:${userId}`);
-  const role = profile?.role;
-  return role === 'admin' || role === 'general' ? role : 'general';
+  return normalizeUserRole(profile?.role);
 };
 
 const MAX_LISTING_EXPIRATION_DAYS = 30;
@@ -1028,12 +1031,12 @@ app.delete("/make-server-dd877831/communities/mine/:communityId", async (c) => {
       const remainingIds = await getMembershipCommunityIds(user.id);
       if (remainingIds.length > 0) {
         await kv.set(`user:${user.id}:community`, remainingIds[0]);
-      .like('key', `community:member:${communityId}:%`)
-      .limit(12);
+      } else {
+        await kv.del(`user:${user.id}:community`);
+      }
+    }
 
-    const members = await Promise.all(
-      (rows ?? []).map(async (row: any) => {
-        const userId = row.key.split(':')[3];
+    return c.json({ success: true });
   } catch (error) {
     console.error("Leave community error:", error);
     return c.json({ error: "Failed to leave community" }, 500);
@@ -1046,20 +1049,18 @@ app.get("/make-server-dd877831/communities/:communityId/members/preview", async 
 
   try {
     const communityId = c.req.param('communityId');
-    const sb = getServiceRoleClient();
 
-    const { data: rows } = await sb
-      .from('kv_store_dd877831')
-      .select('key')
-      .like('key', `user:%:community_member:${communityId}`)
-      .limit(12);
+    // Use consistent getByPrefix pattern from full members endpoint
+    const memberEntries = await kv.getByPrefix(`community:member:${communityId}:`);
 
+    // Limit to 12 members for preview
+    const previewEntries = memberEntries.slice(0, 12);
+
+    // Batch fetch profiles
     const members = await Promise.all(
-      (rows ?? []).map(async (row: any) => {
-        const userId = row.key.split(':')[1];
-        if (!userId) return null;
-        const profile = await kv.get(`user:${userId}`);
-        return profile ? { id: userId, name: profile.name, profilePhotoUrl: profile.profilePhotoUrl ?? null } : null;
+      previewEntries.map(async (entry: any) => {
+        const profile = await kv.get(`user:${entry.userId}`);
+        return profile ? { id: entry.userId, name: profile.name, profilePhotoUrl: profile.profilePhotoUrl ?? null } : null;
       })
     );
 

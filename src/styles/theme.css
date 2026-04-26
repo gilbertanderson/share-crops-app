@@ -101,6 +101,7 @@
   --tomato-empty: #E4D8C2;
   --tomato-filled: #E63946;
   --tomato-hover: #FF4655;
+  --tomato-rotten: #8B4513;
 
   /* Community Badge Colors */
   --badge-blue: #4A6F7D;
@@ -183,6 +184,7 @@
   --tomato-empty: #3A3227;
   --tomato-filled: #D16A5D;
   --tomato-hover: #DD7B70;
+  --tomato-rotten: #A67C52;
 
   /* Sidebar */
   --sidebar: #211C15;
@@ -244,6 +246,7 @@
   --color-tomato-empty: var(--tomato-empty);
   --color-tomato-filled: var(--tomato-filled);
   --color-tomato-hover: var(--tomato-hover);
+  --color-tomato-rotten: var(--tomato-rotten);
 
   /* Charts */
   --color-chart-1: var(--chart-1);

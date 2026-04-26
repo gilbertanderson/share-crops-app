@@ -14,7 +14,7 @@ app.use('*', logger(console.log));
 app.use(
   "/*",
   cors({
-    origin: ["http://localhost:4173", "http://localhost:5173", "http://127.0.0.1:4173", "http://127.0.0.1:5173", "https://sharecrops.app"],
+    origin: CORS_ORIGINS,
     allowHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
@@ -54,10 +54,54 @@ app.use('/*', async (c, next) => {
 const ADMIN_EMAIL = (() => {
   const adminEmail = Deno.env.get('ADMIN_EMAIL');
   if (!adminEmail || adminEmail.trim() === '') {
-    throw new Error('ADMIN_EMAIL environment variable must be configured for proper admin role assignment during user creation; the application will fail to start without it.');
+    throw new Error('ADMIN_EMAIL environment variable is required for admin role assignment');
   }
   return adminEmail.toLowerCase();
 })();
+
+const SEED_RATER_EMAIL = (() => {
+  const seedRaterEmail = Deno.env.get('SEED_RATER_EMAIL');
+  return seedRaterEmail ? seedRaterEmail.toLowerCase() : null;
+})();
+
+const APP_ID = (() => {
+  const appId = Deno.env.get('APP_ID');
+  if (!appId || appId.trim() === '') {
+    throw new Error('APP_ID environment variable must be configured for API routes and storage bucket naming.');
+  }
+  return appId;
+})();
+
+const STORAGE_BUCKET_NAME = (() => {
+  const bucketName = Deno.env.get('STORAGE_BUCKET_NAME');
+  if (!bucketName || bucketName.trim() === '') {
+    throw new Error('STORAGE_BUCKET_NAME environment variable must be configured.');
+  }
+  return bucketName;
+})();
+
+const KV_TABLE_NAME = (() => {
+  const tableName = Deno.env.get('KV_TABLE_NAME');
+  if (!tableName || tableName.trim() === '') {
+    throw new Error('KV_TABLE_NAME environment variable must be configured.');
+  }
+  return tableName;
+})();
+
+const CORS_ORIGINS = (() => {
+  const origins = Deno.env.get('CORS_ORIGINS');
+  if (!origins || origins.trim() === '') {
+    throw new Error('CORS_ORIGINS environment variable must be configured as comma-separated values.');
+  }
+  return origins.split(',').map(o => o.trim());
+})();
+
+const DEFAULT_ORIGIN = (() => {
+  const origin = Deno.env.get('DEFAULT_ORIGIN');
+  return origin?.trim() || 'https://sharecrops.app';
+})();
+
+const API_PREFIX = `make-server-${APP_ID}`;
 
 // Supabase clients
 const getServiceRoleClient = () => createClient(
@@ -73,14 +117,13 @@ const getAnonClient = () => createClient(
 // Initialize storage bucket
 const initStorage = async () => {
   const supabase = getServiceRoleClient();
-  const bucketName = 'make-dd877831-sharecrops';
 
   const { data: buckets } = await supabase.storage.listBuckets();
-  const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+  const bucketExists = buckets?.some(bucket => bucket.name === STORAGE_BUCKET_NAME);
 
   if (!bucketExists) {
-    await supabase.storage.createBucket(bucketName, { public: false });
-    console.log(`Created storage bucket: ${bucketName}`);
+    await supabase.storage.createBucket(STORAGE_BUCKET_NAME, { public: false });
+    console.log(`Created storage bucket: ${STORAGE_BUCKET_NAME}`);
   }
 };
 
@@ -267,7 +310,11 @@ const initMockData = async () => {
 const seedTempUserRatings = async () => {
   try {
     const targetEmails = ['tempUser@share-crops.com', 'userTemp@share-crops.com'];
-    const raterEmail = 'gilbertjanderson@gmail.com';
+    const raterEmail = SEED_RATER_EMAIL;
+    if (!raterEmail) {
+      console.log('SEED_RATER_EMAIL not configured; skipping tempUser rating seed');
+      return;
+    }
     const userIds = await findAuthUserIdsByEmails([...targetEmails, raterEmail]);
     const tempUserId = targetEmails
       .map((email) => userIds[email.toLowerCase()])
@@ -334,7 +381,11 @@ const seedTempUserRatings = async () => {
 const seedTempUserListingOffers = async () => {
   try {
     const targetEmails = ['tempUser@share-crops.com', 'userTemp@share-crops.com'];
-    const raterEmail = 'gilbertjanderson@gmail.com';
+    const raterEmail = SEED_RATER_EMAIL;
+    if (!raterEmail) {
+      console.log('SEED_RATER_EMAIL not configured; skipping listing offer seed');
+      return;
+    }
     const userIds = await findAuthUserIdsByEmails([...targetEmails, raterEmail]);
     const tempUserId = targetEmails
       .map((email) => userIds[email.toLowerCase()])
@@ -507,6 +558,16 @@ const getUserRole = async (userId: string): Promise<'admin' | 'general'> => {
   return normalizeUserRole(profile?.role);
 };
 
+// Maintain admin index for efficient lookups
+const setAdminIndex = async (userId: string, isAdmin: boolean) => {
+  const indexKey = `role:admin:${userId}`;
+  if (isAdmin) {
+    await kv.set(indexKey, { userId, setAt: new Date().toISOString() });
+  } else {
+    await kv.delete(indexKey);
+  }
+};
+
 const MAX_LISTING_EXPIRATION_DAYS = 30;
 
 const getCommunityMembershipKey = (userId: string, communityId: string) =>
@@ -543,6 +604,21 @@ const getMembershipCommunities = async (userId: string): Promise<any[]> => {
   }
 
   return communities;
+};
+
+// Sync memberCount for a community by counting actual members
+const syncCommunityMemberCount = async (communityId: string): Promise<number> => {
+  const members = await kv.getByPrefix(`community:member:${communityId}:`);
+  const actualCount = Array.isArray(members) ? members.length : 0;
+
+  const community = await kv.get(`community:id:${communityId}`);
+  if (community) {
+    community.memberCount = actualCount;
+    await kv.set(`community:id:${communityId}`, community);
+    await kv.set(`community:${community.zipCode}:${community.name.toLowerCase().trim()}`, community);
+  }
+
+  return actualCount;
 };
 
 const findAuthUserIdsByEmails = async (emails: string[]): Promise<Record<string, string | null>> => {
@@ -604,7 +680,7 @@ const toSerializableObject = (value: any): any | null => {
 };
 
 // Health check endpoint
-app.get("/make-server-dd877831/health", (c) => {
+app.get(`/${API_PREFIX}/health`, (c) => {
   return c.json({ status: "ok" });
 });
 
@@ -789,7 +865,7 @@ app.post("/make-server-dd877831/auth/reset-password", async (c) => {
 
     const supabase = getAnonClient();
     await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${c.req.header('Origin') || 'https://sharecrops.app'}/reset-password`,
+      redirectTo: `${c.req.header('Origin') || DEFAULT_ORIGIN}/reset-password`,
     });
 
     // Always return success to avoid leaking whether email exists
@@ -892,12 +968,11 @@ app.post("/make-server-dd877831/communities/join", async (c) => {
     await addMembership(user.id, communityId);
     await kv.set(`community:member:${communityId}:${user.id}`, { userId: user.id, communityId, joinedAt: new Date().toISOString() });
 
-    // Increment member count
-    community.memberCount = (community.memberCount || 1) + 1;
-    await kv.set(`community:id:${communityId}`, community);
-    await kv.set(`community:${community.zipCode}:${community.name.toLowerCase().trim()}`, community);
+    // Sync member count to ensure accuracy
+    await syncCommunityMemberCount(communityId);
+    const updatedCommunity = await kv.get(`community:id:${communityId}`);
 
-    return c.json({ success: true, community });
+    return c.json({ success: true, community: updatedCommunity });
   } catch (error) {
     console.error("Join community error:", error);
     return c.json({ error: "Failed to join community" }, 500);
@@ -1109,15 +1184,11 @@ app.delete("/make-server-dd877831/communities/:communityId/members/:userId", asy
     const membership = await kv.get(membershipKey);
     if (!membership) return c.json({ error: "User is not a member of this community" }, 404);
 
-    const community = await kv.get(`community:id:${communityId}`);
-    if (community) {
-      community.memberCount = Math.max((community.memberCount || 1) - 1, 0);
-      await kv.set(`community:id:${communityId}`, community);
-      await kv.set(`community:${community.zipCode}:${community.name.toLowerCase().trim()}`, community);
-    }
-
     await kv.del(membershipKey);
     await kv.del(`community:member:${communityId}:${targetUserId}`);
+
+    // Sync member count to ensure accuracy
+    await syncCommunityMemberCount(communityId);
 
     const activeCommunityId = await kv.get(`user:${targetUserId}:community`);
     if (activeCommunityId === communityId) {
@@ -1187,13 +1258,8 @@ app.post("/make-server-dd877831/admin/communities/:communityId/clear-members", a
       removed++;
     }
 
-    // Reset member count on the community record
-    const community = await kv.get(`community:id:${communityId}`);
-    if (community) {
-      community.memberCount = 0;
-      await kv.set(`community:id:${communityId}`, community);
-      await kv.set(`community:${community.zipCode}:${community.name.toLowerCase().trim()}`, community);
-    }
+    // Sync member count to ensure accuracy (should be 0 after clearing)
+    await syncCommunityMemberCount(communityId);
 
     return c.json({ success: true, removed });
   } catch (error) {
@@ -1745,24 +1811,18 @@ app.post("/make-server-dd877831/chat/support", async (c) => {
       return c.json({ thread: existing });
     }
 
-    // Find all admin users — top-level 'user:{uuid}' keys split into exactly 2 parts
-    const sb = getServiceRoleClient();
-    const { data: rows } = await sb
-      .from('kv_store_dd877831')
-      .select('key, value')
-      .like('key', 'user:%');
-
-    const admins = (rows ?? [])
-      .filter((r: any) => r.key.split(':').length === 2)
-      .map((r: any) => r.value)
-      .filter((u: any) => u?.role === 'admin' && u?.id && u.id !== user.id);
+    // Find all admin users using dedicated admin index (efficient prefix scan)
+    const adminIndices = await kv.getByPrefix('role:admin:');
+    const admins = (adminIndices ?? [])
+      .map((entry: any) => entry.userId)
+      .filter((id: string) => id && id !== user.id);
 
     if (admins.length === 0) {
       return c.json({ error: "No admins available" }, 404);
     }
 
     const threadId = crypto.randomUUID();
-    const participants = [user.id, ...admins.map((a: any) => a.id)];
+    const participants = [user.id, ...admins];
 
     const thread = {
       id: threadId,
@@ -2119,7 +2179,7 @@ app.post("/make-server-dd877831/upload", async (c) => {
     }
 
     const supabase = getServiceRoleClient();
-    const bucketName = 'make-dd877831-sharecrops';
+    const bucketName = STORAGE_BUCKET_NAME;
     const fileName = `${user.id}/${crypto.randomUUID()}-${file.name}`;
 
     const fileBuffer = await file.arrayBuffer();

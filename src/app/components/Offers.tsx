@@ -32,15 +32,22 @@ const STATUS_LABELS = {
   completed: 'Completed',
 };
 
-function OfferCard({ offer, viewAs, onAction }: {
+function OfferCard({ offer, viewAs, onAction, queryClient }: {
   offer: Offer;
   viewAs: 'buyer' | 'seller';
   onAction: () => void;
+  queryClient: any;
 }) {
   const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [ratingSuccess, setRatingSuccess] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const { data: meData } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => API.getMe(),
+  });
+  const currentUserId = meData?.user?.id;
 
   const { data: listingData } = useQuery({
     queryKey: ['listing', offer.listingId],
@@ -55,6 +62,14 @@ function OfferCard({ offer, viewAs, onAction }: {
     enabled: !!otherUserId,
   });
   const otherUser: User | null = otherUserData?.profile ?? null;
+
+  const { data: userRatingsData } = useQuery({
+    queryKey: ['ratings', 'user', currentUserId],
+    queryFn: () => API.getUserRatings(currentUserId!),
+    enabled: !!currentUserId,
+  });
+  const userRatings = userRatingsData?.ratings ?? [];
+  const hasRatedThisOffer = userRatings.some((r: any) => r.offerId === offer.id);
 
   const handleAccept = async () => {
     try {
@@ -158,7 +173,7 @@ function OfferCard({ offer, viewAs, onAction }: {
               </Button>
             )}
 
-            {offer.status === 'completed' && (
+            {offer.status === 'completed' && !hasRatedThisOffer && (
               <Button
                 onClick={() => setShowRatingDialog(true)}
                 size="sm"
@@ -194,6 +209,7 @@ function OfferCard({ offer, viewAs, onAction }: {
           onSuccess={() => {
             setShowRatingDialog(false);
             setRatingSuccess(true);
+            queryClient.invalidateQueries({ queryKey: ['ratings', 'user', currentUserId] });
             onAction();
           }}
         />
@@ -301,6 +317,7 @@ export function Offers() {
                 offer={offer}
                 viewAs={viewAs}
                 onAction={handleAction}
+                queryClient={queryClient}
               />
             ))}
           </div>

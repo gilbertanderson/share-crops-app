@@ -1,5 +1,4 @@
-const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string;
-const publicAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import type { User, Listing, Offer, Thread, Message, Rating, Community } from '../types';
 
 const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-dd877831`;
@@ -25,13 +24,7 @@ export class AuthManager {
 
   static getUser(): User | null {
     const user = localStorage.getItem(this.USER_KEY);
-    if (!user) return null;
-    try {
-      return JSON.parse(user);
-    } catch {
-      localStorage.removeItem(this.USER_KEY);
-      return null;
-    }
+    return user ? JSON.parse(user) : null;
   }
 
   static setUser(user: User) {

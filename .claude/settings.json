@@ -32,7 +32,10 @@
       "Read(//Users/gilbertanderson/.config/**)",
       "Bash(curl -s 'https://xwjvtpzpufhuybylnwzx.supabase.co/functions/v1/make-server-dd877831/communities/search?zipCode=78724' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3anZ0cHpwdWZodXlieWxud3p4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5OTE2OTQsImV4cCI6MjA5MjU2NzY5NH0.aldPfV9K4VZaJKQJgMTx27JRHqIKesAedRyBt8LPIxQ')",
       "Bash(npx supabase *)",
-      "Bash(curl -s -X POST https://xwjvtpzpufhuybylnwzx.supabase.co/functions/v1/make-server-dd877831/admin/temp-clear/84afa1e3-184b-45db-86ba-45ca224963d3 -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3anZ0cHpwdWZodXlieWxud3p4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5OTE2OTQsImV4cCI6MjA5MjU2NzY5NH0.aldPfV9K4VZaJKQJgMTx27JRHqIKesAedRyBt8LPIxQ' -H 'Content-Type: application/json' -d '{\"secret\":\"sc-cleanup-2026\"}')"
+      "Bash(curl -s -X POST https://xwjvtpzpufhuybylnwzx.supabase.co/functions/v1/make-server-dd877831/admin/temp-clear/84afa1e3-184b-45db-86ba-45ca224963d3 -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3anZ0cHpwdWZodXlieWxud3p4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5OTE2OTQsImV4cCI6MjA5MjU2NzY5NH0.aldPfV9K4VZaJKQJgMTx27JRHqIKesAedRyBt8LPIxQ' -H 'Content-Type: application/json' -d '{\"secret\":\"sc-cleanup-2026\"}')",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(supabase secrets *)"
     ]
   }
 }

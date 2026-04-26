@@ -173,6 +173,7 @@ function OfferCard({ offer, viewAs, onAction, queryClient }: {
               </Button>
             )}
 
+            {/* Rating buttons - show for both buyers and sellers */}
             {offer.status === 'completed' && !hasRatedThisOffer && (
               <Button
                 onClick={() => setShowRatingDialog(true)}

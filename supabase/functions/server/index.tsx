@@ -1674,6 +1674,24 @@ app.post("/make-server-dd877831/offers/:id/complete", async (c) => {
     await kv.set(`offer:buyer:${offer.buyerId}:${offerId}`, offer);
     await kv.set(`offer:seller:${offer.sellerId}:${offerId}`, offer);
 
+    // Swap listing ownership: buyer becomes the new seller
+    const listing = await kv.get(`listing:${offer.listingId}`);
+    if (listing) {
+      const oldSellerId = listing.sellerId;
+      const newSellerId = offer.buyerId;
+
+      listing.status = 'completed';
+      listing.sellerId = newSellerId;
+
+      // Update listing in all KV indexes
+      await kv.set(`listing:${offer.listingId}`, listing);
+      await kv.set(`listing:community:${listing.communityId}:${offer.listingId}`, listing);
+
+      // Remove old seller index and add new seller index
+      await kv.delete(`listing:user:${oldSellerId}:${offer.listingId}`);
+      await kv.set(`listing:user:${newSellerId}:${offer.listingId}`, listing);
+    }
+
     return c.json({ success: true, offer });
   } catch (error) {
     console.error("Complete offer error:", error);

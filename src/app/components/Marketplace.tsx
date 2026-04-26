@@ -134,6 +134,123 @@ function AdminMembersModal({
   );
 }
 
+function CommunitySearchModal({ onClose, onJoined }: { onClose: () => void; onJoined: () => void }) {
+  const queryClient = useQueryClient();
+  const [zipCode, setZipCode] = useState('');
+  const [communityName, setCommunityName] = useState('');
+  const [results, setResults] = useState<Community[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSearch = async () => {
+    if (zipCode.length < 5) { setError('Enter a valid 5-digit ZIP code'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      const data = await API.searchCommunities(zipCode);
+      setResults(data.communities ?? []);
+    } catch (err: any) {
+      setError(err.message || 'Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoin = async (communityId: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      await API.joinCommunity(communityId);
+      queryClient.invalidateQueries({ queryKey: ['my-community'] });
+      queryClient.invalidateQueries({ queryKey: ['my-communities'] });
+      onJoined();
+    } catch (err: any) {
+      setError(err.message || 'Failed to join');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!communityName.trim()) { setError('Enter a community name'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      await API.createCommunity(communityName.trim(), zipCode);
+      queryClient.invalidateQueries({ queryKey: ['my-community'] });
+      queryClient.invalidateQueries({ queryKey: ['my-communities'] });
+      onJoined();
+    } catch (err: any) {
+      setError(err.message || 'Failed to create community');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const noResults = results !== null && results.length === 0;
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Find a Community</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              placeholder="ZIP code"
+              value={zipCode}
+              maxLength={5}
+              onChange={(e) => { setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5)); setResults(null); }}
+              className="bg-input-background border-input-border"
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <Button onClick={handleSearch} disabled={loading} className="bg-primary hover:bg-primary-hover text-primary-foreground shrink-0">
+              Search
+            </Button>
+          </div>
+
+          {results !== null && results.length > 0 && (
+            <div className="space-y-2">
+              {results.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-3 p-3 border border-border rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.memberCount} {c.memberCount === 1 ? 'member' : 'members'}</p>
+                  </div>
+                  <Button size="sm" onClick={() => handleJoin(c.id)} disabled={loading} className="bg-primary hover:bg-primary-hover text-primary-foreground shrink-0">
+                    Join
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {noResults && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">No communities found in ZIP {zipCode}. Create one:</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Community name"
+                  value={communityName}
+                  onChange={(e) => setCommunityName(e.target.value)}
+                  className="bg-input-background border-input-border"
+                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                />
+                <Button onClick={handleCreate} disabled={loading} className="bg-primary hover:bg-primary-hover text-primary-foreground shrink-0">
+                  Create
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {error && <p className="text-sm text-error">{error}</p>}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function Marketplace() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
@@ -141,6 +258,7 @@ export function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [managingCommunity, setManagingCommunity] = useState<Community | null>(null);
+  const [showCommunitySearch, setShowCommunitySearch] = useState(false);
 
   const { data: communityData, isLoading: isCommunityLoading } = useQuery({
     queryKey: ['my-community'],
@@ -210,16 +328,29 @@ export function Marketplace() {
                 </p>
               ) : null}
             </div>
-            <Button
-              onClick={() => setShowCreate(true)}
-              size="sm"
-              className="bg-primary hover:bg-primary-hover text-primary-foreground"
-            >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              List Item
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCommunitySearch(true)}
+                className="text-muted-foreground"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Find Community
+              </Button>
+              <Button
+                onClick={() => setShowCreate(true)}
+                size="sm"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                List Item
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">

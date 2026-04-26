@@ -221,7 +221,8 @@ function OfferCard({ offer, viewAs, onAction, queryClient }: {
           onSuccess={() => {
             setShowRatingDialog(false);
             setRatingSuccess(true);
-            queryClient.invalidateQueries({ queryKey: ['ratings', 'user', currentUserId] });
+            // Refetch ratings immediately to ensure the button state updates
+            queryClient.refetchQueries({ queryKey: ['ratings', 'user', currentUserId] });
             onAction();
           }}
         />

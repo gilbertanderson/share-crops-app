@@ -580,13 +580,13 @@ export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }:
                           viewBox="0 0 24 24"
                           xmlns="http://www.w3.org/2000/svg"
                           className="w-full h-full"
-                          style={{ opacity: isHovering ? 0.8 : 1 }}
+                          style={{ opacity: isHovering ? 1 : 1 }}
                         >
                           <circle
                             cx="12"
                             cy="14"
                             r="8"
-                            style={{ fill: isFilled ? 'var(--tomato-rotten)' : 'var(--tomato-empty)' }}
+                            style={{ fill: isFilled ? '#8B4513' : '#E4D8C2' }}
                           />
                           {isFilled && (
                             <>
@@ -648,8 +648,8 @@ export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }:
                             d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z"
                             fill={
                               isFilled
-                                ? 'var(--tomato-filled)'
-                                : 'var(--tomato-empty)'
+                                ? '#E63946'
+                                : '#E4D8C2'
                             }
                             className="transition-colors duration-200"
                           />

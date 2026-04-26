@@ -16,9 +16,24 @@ export function CommunitySetup({ onComplete, onLogout }: CommunitySetupProps) {
   const [zipCode, setZipCode] = useState('');
   const [communityName, setCommunityName] = useState('');
   const [communities, setCommunities] = useState<any[]>([]);
+  const [userCommunityIds, setUserCommunityIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchPerformed, setSearchPerformed] = useState(false);
+
+  useEffect(() => {
+    const loadUserCommunities = async () => {
+      try {
+        const data = await API.getMyCommunities();
+        const ids = (data.communities || []).map((c: any) => c.id);
+        setUserCommunityIds(ids);
+      } catch (err) {
+        // Silent fail - we'll just allow joins
+      }
+    };
+
+    loadUserCommunities();
+  }, []);
 
   const searchCommunities = async () => {
     if (!zipCode || zipCode.length < 5) {
@@ -138,27 +153,35 @@ export function CommunitySetup({ onComplete, onLogout }: CommunitySetupProps) {
                   <h3 className="font-medium text-sm text-muted-foreground">
                     Communities in {zipCode}
                   </h3>
-                  {communities.map((community) => (
-                    <div
-                      key={community.id}
-                      className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium">{community.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {community.memberCount} member{community.memberCount !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => joinCommunity(community.id)}
-                        disabled={loading}
-                        size="sm"
-                        className="bg-primary hover:bg-primary-hover text-primary-foreground"
+                  {communities.map((community) => {
+                    const isAlreadyMember = userCommunityIds.includes(community.id);
+                    return (
+                      <div
+                        key={community.id}
+                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
                       >
-                        Join
-                      </Button>
-                    </div>
-                  ))}
+                        <div>
+                          <p className="font-medium">{community.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {community.memberCount} member{community.memberCount !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => joinCommunity(community.id)}
+                          disabled={loading || isAlreadyMember}
+                          size="sm"
+                          variant={isAlreadyMember ? 'outline' : 'default'}
+                          className={
+                            isAlreadyMember
+                              ? 'text-muted-foreground'
+                              : 'bg-primary hover:bg-primary-hover text-primary-foreground'
+                          }
+                        >
+                          {isAlreadyMember ? '✓ Joined' : 'Join'}
+                        </Button>
+                      </div>
+                    );
+                  })}
 
                   <div className="pt-2">
                     <Button

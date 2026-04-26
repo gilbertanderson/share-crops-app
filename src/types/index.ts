@@ -58,6 +58,8 @@ export interface Offer {
 export interface Thread {
   id: string;
   listingId: string;
+  type?: 'listing' | 'support';
+  title?: string;
   participants: string[];
   lastMessage?: string;
   lastMessageAt: string;
@@ -79,5 +81,10 @@ export interface Rating {
   raterUserId: string;
   rating: number;
   comment?: string;
+  listingSnapshot?: {
+    id: string;
+    title: string;
+    photoUrl?: string | null;
+  };
   createdAt: string;
 }

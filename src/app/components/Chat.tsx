@@ -16,6 +16,8 @@ export function ChatList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const currentUser = AuthManager.getUser();
+  const { isAdmin } = useAuth();
+  const [isCreatingHelp, setIsCreatingHelp] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['threads'],
@@ -25,6 +27,19 @@ export function ChatList() {
   const { containerRef: threadsRef, activeId: activeThreadId } = useMobileScrollActive(
     threads.map((thread) => thread.id)
   );
+
+  const handleHelpClick = async () => {
+    setIsCreatingHelp(true);
+    try {
+      const { thread } = await API.createSupportThread();
+      queryClient.invalidateQueries({ queryKey: ['threads'] });
+      navigate(`/messages/${thread.id}`);
+    } catch (err) {
+      console.error('Failed to open support thread', err);
+    } finally {
+      setIsCreatingHelp(false);
+    }
+  };
 
   useEffect(() => {
     const channel = supabase
@@ -49,8 +64,22 @@ export function ChatList() {
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 bg-background border-b border-border">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Messages</h1>
+          {!isAdmin && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleHelpClick}
+              disabled={isCreatingHelp}
+              className="text-muted-foreground hover:text-foreground gap-1.5"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {isCreatingHelp ? 'Opening...' : 'Help'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -106,12 +135,13 @@ export function ChatThread() {
     queryFn: () => API.getThreads(),
   });
   const thread = threadsData?.threads?.find((t) => t.id === threadId) ?? null;
-  const otherUserId = thread?.participants.find((id) => id !== currentUser?.id) ?? '';
+  const isSupport = thread?.type === 'support';
+  const otherUserId = isSupport ? '' : (thread?.participants.find((id) => id !== currentUser?.id) ?? '');
 
   const { data: otherUserData } = useQuery({
     queryKey: ['profile', otherUserId],
     queryFn: () => API.getProfile(otherUserId),
-    enabled: !!otherUserId,
+    enabled: !!otherUserId && !isSupport,
   });
   const otherUser: User | null = otherUserData?.profile ?? null;
 
@@ -184,13 +214,21 @@ export function ChatThread() {
               </svg>
             </button>
             <Avatar className="w-10 h-10 shrink-0">
-              <AvatarImage src={otherUser?.profilePhotoUrl} alt={otherUser?.name ? `${otherUser.name}'s profile photo` : 'User profile photo'} />
+              {!isSupport && <AvatarImage src={otherUser?.profilePhotoUrl} alt={otherUser?.name ? `${otherUser.name}'s profile photo` : 'User profile photo'} />}
               <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
+                {isSupport ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  otherUser?.name?.charAt(0)?.toUpperCase() || 'U'
+                )}
               </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">{otherUser?.name || 'Loading...'}</p>
+              <p className="font-medium">
+                {isSupport ? (thread?.title ?? 'Support Team') : (otherUser?.name || 'Loading...')}
+              </p>
             </div>
           </div>
         </div>

@@ -153,7 +153,7 @@ export function CommunitySetup({ onComplete, onLogout }: CommunitySetupProps) {
                         onClick={() => joinCommunity(community.id)}
                         disabled={loading}
                         size="sm"
-                        className="bg-secondary hover:bg-secondary-hover text-secondary-foreground"
+                        className="bg-primary hover:bg-primary-hover text-primary-foreground"
                       >
                         Join
                       </Button>

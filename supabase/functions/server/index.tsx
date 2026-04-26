@@ -51,7 +51,7 @@ app.use('/*', async (c, next) => {
   await next();
 });
 
-const ADMIN_EMAIL = 'gilbertjanderson@gmail.com';
+const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') ?? 'gilbertjanderson@gmail.com';
 
 // Supabase clients
 const getServiceRoleClient = () => createClient(
@@ -884,7 +884,15 @@ app.get("/make-server-dd877831/communities/search", async (c) => {
       return c.json({ error: "Zip code is required" }, 400);
     }
 
-    const communities = await kv.getByPrefix(`community:${zipCode}:`);
+    const normalizedZip = zipCode.trim();
+    const raw = await kv.getByPrefix(`community:${normalizedZip}:`);
+
+    // Only return communities whose stored zipCode matches the searched zip.
+    // Guards against stale index entries or data written under unexpected keys.
+    const communities = raw.filter(
+      (entry: any) => entry && typeof entry === 'object' && entry.zipCode?.trim() === normalizedZip
+    );
+
     return c.json({ communities });
   } catch (error) {
     console.error("Search communities error:", error);
@@ -1008,6 +1016,36 @@ app.delete("/make-server-dd877831/communities/mine/:communityId", async (c) => {
   }
 });
 
+app.get("/make-server-dd877831/communities/:communityId/members/preview", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  try {
+    const communityId = c.req.param('communityId');
+    const sb = getServiceRoleClient();
+
+    const { data: rows } = await sb
+      .from('kv_store_dd877831')
+      .select('key')
+      .like('key', `user:%:community_member:${communityId}`)
+      .limit(12);
+
+    const members = await Promise.all(
+      (rows ?? []).map(async (row: any) => {
+        const userId = row.key.split(':')[1];
+        if (!userId) return null;
+        const profile = await kv.get(`user:${userId}`);
+        return profile ? { id: userId, name: profile.name, profilePhotoUrl: profile.profilePhotoUrl ?? null } : null;
+      })
+    );
+
+    return c.json({ members: members.filter(Boolean) });
+  } catch (error) {
+    console.error("Get community members preview error:", error);
+    return c.json({ error: "Failed to get members" }, 500);
+  }
+});
+
 app.get("/make-server-dd877831/communities/:communityId/members", async (c) => {
   const user = await getAuthUser(c.req.header('Authorization'));
   if (!user) return c.json({ error: "Unauthorized" }, 401);
@@ -1086,6 +1124,51 @@ app.get("/make-server-dd877831/communities/all", async (c) => {
   } catch (error) {
     console.error("Get all communities error:", error);
     return c.json({ error: "Failed to get communities" }, 500);
+  }
+});
+
+// One-time admin cleanup: remove all members from a community
+app.post("/make-server-dd877831/admin/communities/:communityId/clear-members", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+  const role = await getUserRole(user.id);
+  if (role !== 'admin') return c.json({ error: "Forbidden" }, 403);
+
+  try {
+    const communityId = c.req.param('communityId');
+
+    // Get all reverse-index member records for this community
+    const memberEntries = await kv.getByPrefix(`community:member:${communityId}:`);
+    let removed = 0;
+
+    for (const entry of memberEntries) {
+      if (!entry?.userId) continue;
+      const userId = entry.userId;
+
+      // Remove both index directions
+      await kv.del(`community:member:${communityId}:${userId}`);
+      await kv.del(getCommunityMembershipKey(userId, communityId));
+
+      // If this was the user's active community, clear it
+      const activeCommunityId = await kv.get(`user:${userId}:community`);
+      if (activeCommunityId === communityId) {
+        await kv.del(`user:${userId}:community`);
+      }
+      removed++;
+    }
+
+    // Reset member count on the community record
+    const community = await kv.get(`community:id:${communityId}`);
+    if (community) {
+      community.memberCount = 0;
+      await kv.set(`community:id:${communityId}`, community);
+      await kv.set(`community:${community.zipCode}:${community.name.toLowerCase().trim()}`, community);
+    }
+
+    return c.json({ success: true, removed });
+  } catch (error) {
+    console.error("Clear members error:", error);
+    return c.json({ error: "Failed to clear members" }, 500);
   }
 });
 
@@ -1620,6 +1703,60 @@ app.get("/make-server-dd877831/trending/community/:communityId", async (c) => {
 
 // ===== CHAT ROUTES =====
 
+app.post("/make-server-dd877831/chat/support", async (c) => {
+  const user = await getAuthUser(c.req.header('Authorization'));
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+  try {
+    // Return existing support thread if one already exists for this user
+    const existingThreads = await kv.getByPrefix(`thread:user:${user.id}:`);
+    const existing = existingThreads.find((t: any) => t?.type === 'support');
+    if (existing) {
+      return c.json({ thread: existing });
+    }
+
+    // Find all admin users — top-level 'user:{uuid}' keys split into exactly 2 parts
+    const sb = getServiceRoleClient();
+    const { data: rows } = await sb
+      .from('kv_store_dd877831')
+      .select('key, value')
+      .like('key', 'user:%');
+
+    const admins = (rows ?? [])
+      .filter((r: any) => r.key.split(':').length === 2)
+      .map((r: any) => r.value)
+      .filter((u: any) => u?.role === 'admin' && u?.id && u.id !== user.id);
+
+    if (admins.length === 0) {
+      return c.json({ error: "No admins available" }, 404);
+    }
+
+    const threadId = crypto.randomUUID();
+    const participants = [user.id, ...admins.map((a: any) => a.id)];
+
+    const thread = {
+      id: threadId,
+      listingId: 'support',
+      type: 'support',
+      title: 'Support Team',
+      participants,
+      lastMessage: '',
+      lastMessageAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    await kv.set(`thread:${threadId}`, thread);
+    for (const pid of participants) {
+      await kv.set(`thread:user:${pid}:${threadId}`, thread);
+    }
+
+    return c.json({ thread });
+  } catch (error) {
+    console.error("Create support thread error:", error);
+    return c.json({ error: "Failed to create support thread" }, 500);
+  }
+});
+
 app.post("/make-server-dd877831/chat/threads", async (c) => {
   const user = await getAuthUser(c.req.header('Authorization'));
   if (!user) return c.json({ error: "Unauthorized" }, 401);
@@ -1795,6 +1932,12 @@ app.post("/make-server-dd877831/ratings", async (c) => {
       return c.json({ error: "You have already rated this exchange" }, 400);
     }
 
+    // Snapshot listing details so they're preserved even if the listing is later deleted
+    const listing = await kv.get(`listing:${offer.listingId}`);
+    const listingSnapshot = listing
+      ? { id: listing.id, title: listing.title, photoUrl: listing.photos?.[0] ?? null }
+      : null;
+
     const ratingId = crypto.randomUUID();
     const newRating = {
       id: ratingId,
@@ -1803,6 +1946,7 @@ app.post("/make-server-dd877831/ratings", async (c) => {
       raterUserId: user.id,
       rating,
       comment: comment || '',
+      listingSnapshot,
       createdAt: new Date().toISOString(),
     };
 

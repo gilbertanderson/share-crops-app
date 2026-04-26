@@ -48,7 +48,7 @@ export function ListingCard({ listing, onClick, mobileActive = false, rank = nul
         mobileActive ? 'mobile-scroll-active-2xl' : '',
       ].join(' ')}
     >
-      <div className="relative w-full aspect-square bg-muted">
+      <div className="relative w-full aspect-square max-w-[398px] max-h-[398px] bg-muted overflow-hidden mx-auto">
         {inSeason ? (
           <span className="absolute top-2 left-2 z-0 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full shadow">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -58,7 +58,7 @@ export function ListingCard({ listing, onClick, mobileActive = false, rank = nul
           </span>
         ) : null}
         {rank ? (
-          <span className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-background/95 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+          <span className="absolute top-2 right-2 z-[1] flex items-center gap-1 bg-background/95 text-primary text-xs font-semibold px-2.5 py-1 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
             </svg>

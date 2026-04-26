@@ -227,6 +227,10 @@ export class API {
     return this.request('/communities/all');
   }
 
+  static async getCommunityMembersPreview(communityId: string): Promise<{ members: Array<{ id: string; name: string; profilePhotoUrl: string | null }> }> {
+    return this.request(`/communities/${communityId}/members/preview`);
+  }
+
   static async getCommunityMembers(communityId: string): Promise<{ members: User[] }> {
     return this.request(`/communities/${communityId}/members`);
   }
@@ -302,6 +306,10 @@ export class API {
   }
 
   // Chat
+  static async createSupportThread(): Promise<{ thread: Thread }> {
+    return this.request('/chat/support', { method: 'POST' });
+  }
+
   static async createThread(listingId: string, otherUserId: string): Promise<{ thread: Thread }> {
     return this.request('/chat/threads', {
       method: 'POST',

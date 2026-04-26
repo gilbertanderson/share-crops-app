@@ -256,6 +256,7 @@ export function Marketplace() {
   const { isAdmin } = useAuth();
   const [filter, setFilter] = useState<'all' | 'community' | 'global'>('community');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sort, setSort] = useState<'default' | 'date-desc' | 'date-asc' | 'alpha-asc' | 'alpha-desc'>('default');
   const [showCreate, setShowCreate] = useState(false);
   const [managingCommunity, setManagingCommunity] = useState<Community | null>(null);
   const [showCommunitySearch, setShowCommunitySearch] = useState(false);
@@ -298,16 +299,6 @@ export function Marketplace() {
       )
     : listings;
 
-  const visibleListings = [...filteredListings].sort((a, b) => {
-    const aIn = isProduceInSeason(a.title, a.description);
-    const bIn = isProduceInSeason(b.title, b.description);
-    return aIn === bIn ? 0 : aIn ? -1 : 1;
-  });
-
-  const { containerRef: listingsRef, activeId: activeListingId } = useMobileScrollActive(
-    visibleListings.map((listing) => listing.id)
-  );
-
   const rankByListingId = new Map<string, number>();
   (rankingData?.items ?? [])
     .filter((item) => item.offerCount > 0 && item.listing.communityId === community?.id)
@@ -315,42 +306,51 @@ export function Marketplace() {
       rankByListingId.set(item.listing.id, index + 1);
     });
 
+  const visibleListings = [...filteredListings].sort((a, b) => {
+    if (sort === 'date-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    if (sort === 'date-asc')  return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    if (sort === 'alpha-asc') return a.title.localeCompare(b.title);
+    if (sort === 'alpha-desc') return b.title.localeCompare(a.title);
+    // Default: in-season → community rank → A–Z
+    const aIn = isProduceInSeason(a.title, a.description);
+    const bIn = isProduceInSeason(b.title, b.description);
+    if (aIn !== bIn) return aIn ? -1 : 1;
+    const aRank = rankByListingId.get(a.id) ?? Infinity;
+    const bRank = rankByListingId.get(b.id) ?? Infinity;
+    if (aRank !== bRank) return aRank - bRank;
+    return a.title.localeCompare(b.title);
+  });
+
+  const { containerRef: listingsRef, activeId: activeListingId } = useMobileScrollActive(
+    visibleListings.map((listing) => listing.id)
+  );
+
+  const isDateSort = sort === 'date-desc' || sort === 'date-asc';
+  const isAlphaSort = sort === 'alpha-asc' || sort === 'alpha-desc';
+
+  const handleDateSort = () => {
+    if (sort === 'date-desc') setSort('date-asc');
+    else if (sort === 'date-asc') setSort('date-desc');
+    else setSort('date-desc');
+  };
+
+  const handleAlphaSort = () => {
+    if (sort === 'alpha-asc') setSort('alpha-desc');
+    else if (sort === 'alpha-desc') setSort('alpha-asc');
+    else setSort('alpha-asc');
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Marketplace</h1>
-              {community ? (
-                <p className="text-sm text-muted-foreground">
-                  {community.name} · ZIP {community.zipCode}
-                </p>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCommunitySearch(true)}
-                className="text-muted-foreground"
-              >
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Find Community
-              </Button>
-              <Button
-                onClick={() => setShowCreate(true)}
-                size="sm"
-                className="bg-primary hover:bg-primary-hover text-primary-foreground"
-              >
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                List Item
-              </Button>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold">Marketplace</h1>
+            {community ? (
+              <p className="text-sm text-muted-foreground">
+                {community.name} · ZIP {community.zipCode}
+              </p>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -418,6 +418,51 @@ export function Marketplace() {
               </button>
             )}
           </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground shrink-0">Sort:</span>
+              <Button
+                size="sm"
+                variant={isDateSort ? 'default' : 'outline'}
+                onClick={handleDateSort}
+                className={isDateSort ? 'bg-primary text-primary-foreground h-7 text-xs px-2.5' : 'h-7 text-xs px-2.5'}
+              >
+                {sort === 'date-asc' ? 'Old → New' : 'New → Old'}
+              </Button>
+              <Button
+                size="sm"
+                variant={isAlphaSort ? 'default' : 'outline'}
+                onClick={handleAlphaSort}
+                className={isAlphaSort ? 'bg-primary text-primary-foreground h-7 text-xs px-2.5' : 'h-7 text-xs px-2.5'}
+              >
+                {sort === 'alpha-desc' ? 'Z → A' : 'A → Z'}
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCommunitySearch(true)}
+                className="text-muted-foreground"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Community
+              </Button>
+              <Button
+                onClick={() => setShowCreate(true)}
+                size="sm"
+                className="bg-primary hover:bg-primary-hover text-primary-foreground"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                List
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -477,6 +522,16 @@ export function Marketplace() {
         <AdminMembersModal
           community={managingCommunity}
           onClose={() => setManagingCommunity(null)}
+        />
+      )}
+
+      {showCommunitySearch && (
+        <CommunitySearchModal
+          onClose={() => setShowCommunitySearch(false)}
+          onJoined={() => {
+            setShowCommunitySearch(false);
+            setFilter('community');
+          }}
         />
       )}
     </div>

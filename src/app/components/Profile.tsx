@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query';
 import { API } from '../../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useMobileScrollActive } from '../hooks/useMobileScrollActive';
@@ -64,6 +64,19 @@ export function Profile() {
   });
   const communities: Community[] = communitiesData?.communities ?? [];
   const activeCommunityId: string | null = communitiesData?.activeCommunityId ?? null;
+
+  const memberPreviews = useQueries({
+    queries: communities.map((c) => ({
+      queryKey: ['community-members-preview', c.id],
+      queryFn: () => API.getCommunityMembersPreview(c.id),
+      enabled: communities.length > 0,
+      staleTime: 60_000,
+    })),
+  });
+
+  const membersByCommunityId = Object.fromEntries(
+    communities.map((c, i) => [c.id, memberPreviews[i]?.data?.members ?? []])
+  );
 
   const [deletingRatingId, setDeletingRatingId] = useState<string | null>(null);
 
@@ -240,29 +253,63 @@ export function Profile() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {communities.map((community) => (
-                <Card key={community.id}>
-                  <CardContent className="p-4 flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{community.name}</p>
-                      <p className="text-sm text-muted-foreground">ZIP {community.zipCode}</p>
-                      {activeCommunityId === community.id && (
-                        <p className="text-xs text-primary mt-1">Active community</p>
+              {communities.map((community) => {
+                const members = membersByCommunityId[community.id] ?? [];
+                const visibleMembers = members.slice(0, 8);
+                const overflow = community.memberCount - visibleMembers.length;
+
+                return (
+                  <Card key={community.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{community.name}</p>
+                          <p className="text-sm text-muted-foreground">ZIP {community.zipCode}</p>
+                          {activeCommunityId === community.id && (
+                            <p className="text-xs text-primary mt-1">Active community</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {community.memberCount} {community.memberCount === 1 ? 'member' : 'members'}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setLeaveError(''); setConfirmLeaveId(community.id); }}
+                          disabled={leavingCommunityId === community.id}
+                          className="border-error text-error hover:bg-error/10 shrink-0"
+                        >
+                          {leavingCommunityId === community.id ? 'Leaving...' : 'Leave'}
+                        </Button>
+                      </div>
+
+                      {visibleMembers.length > 0 && (
+                        <div className="flex items-center mt-3">
+                          <div className="flex -space-x-2">
+                            {visibleMembers.map((member) => (
+                              <Avatar
+                                key={member.id}
+                                className="w-8 h-8 border-2 border-card ring-0"
+                                title={member.name}
+                              >
+                                <AvatarImage src={member.profilePhotoUrl ?? undefined} alt={member.name} />
+                                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-medium">
+                                  {member.name?.charAt(0)?.toUpperCase() ?? '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                            ))}
+                            {overflow > 0 && (
+                              <div className="w-8 h-8 rounded-full border-2 border-card bg-muted flex items-center justify-center">
+                                <span className="text-xs font-medium text-muted-foreground">+{overflow}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       )}
-                      <p className="text-xs text-muted-foreground mt-0.5">{community.memberCount} {community.memberCount === 1 ? 'member' : 'members'}</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => { setLeaveError(''); setConfirmLeaveId(community.id); }}
-                      disabled={leavingCommunityId === community.id}
-                      className="border-error text-error hover:bg-error/10"
-                    >
-                      {leavingCommunityId === community.id ? 'Leaving...' : 'Leave'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
@@ -294,6 +341,32 @@ export function Profile() {
                       )}
                     </div>
                   </div>
+
+                  {rating.listingSnapshot && (
+                    <div className="flex items-center gap-2 py-1">
+                      {rating.listingSnapshot.photoUrl && (
+                        <img
+                          src={rating.listingSnapshot.photoUrl}
+                          alt={rating.listingSnapshot.title}
+                          className="w-8 h-8 rounded object-cover shrink-0 bg-muted"
+                        />
+                      )}
+                      {rating.listingSnapshot.id ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/listing/${rating.listingSnapshot!.id}`)}
+                          className="text-xs text-primary hover:underline text-left truncate"
+                        >
+                          {rating.listingSnapshot.title}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground truncate">
+                          {rating.listingSnapshot.title}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {rating.comment && (
                     <p className="text-sm text-foreground">{rating.comment}</p>
                   )}

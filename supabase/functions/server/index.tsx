@@ -51,7 +51,13 @@ app.use('/*', async (c, next) => {
   await next();
 });
 
-const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') ?? 'gilbertjanderson@gmail.com';
+const ADMIN_EMAIL = (() => {
+  const adminEmail = Deno.env.get('ADMIN_EMAIL');
+  if (!adminEmail || adminEmail.trim() === '') {
+    throw new Error('ADMIN_EMAIL environment variable must be configured');
+  }
+  return adminEmail.toLowerCase();
+})();
 
 // Supabase clients
 const getServiceRoleClient = () => createClient(
@@ -471,13 +477,31 @@ const getAuthUser = async (authHeader: string | null) => {
       error: String(error),
       timestamp: new Date().toISOString(),
     });
-    return null;
+
+  if (!profile) {
+    security.logSecurityEvent('missing_user_profile', 'medium', {
+      userId,
+      timestamp: new Date().toISOString(),
+    });
+    return 'general';
+  }
+
+  if (typeof profile.role !== 'string') {
+    security.logSecurityEvent('invalid_user_role', 'medium', {
+      userId,
+      timestamp: new Date().toISOString(),
+    });
+    return 'general';
+  }
+
+  return profile.role;
   }
 };
 
-const getUserRole = async (userId: string): Promise<string> => {
+const getUserRole = async (userId: string): Promise<'admin' | 'general'> => {
   const profile = await kv.get(`user:${userId}`);
-  return profile?.role ?? 'general';
+  const role = profile?.role;
+  return role === 'admin' || role === 'general' ? role : 'general';
 };
 
 const MAX_LISTING_EXPIRATION_DAYS = 30;
@@ -1004,12 +1028,12 @@ app.delete("/make-server-dd877831/communities/mine/:communityId", async (c) => {
       const remainingIds = await getMembershipCommunityIds(user.id);
       if (remainingIds.length > 0) {
         await kv.set(`user:${user.id}:community`, remainingIds[0]);
-      } else {
-        await kv.del(`user:${user.id}:community`);
-      }
-    }
+      .like('key', `community:member:${communityId}:%`)
+      .limit(12);
 
-    return c.json({ success: true });
+    const members = await Promise.all(
+      (rows ?? []).map(async (row: any) => {
+        const userId = row.key.split(':')[3];
   } catch (error) {
     console.error("Leave community error:", error);
     return c.json({ error: "Failed to leave community" }, 500);
@@ -1135,6 +1159,11 @@ app.post("/make-server-dd877831/admin/communities/:communityId/clear-members", a
   if (role !== 'admin') return c.json({ error: "Forbidden" }, 403);
 
   try {
+    const body = await c.req.json().catch(() => ({}));
+    if (body?.confirm !== 'CLEAR_MEMBERS') {
+      return c.json({ error: 'Missing confirmation. Send { "confirm": "CLEAR_MEMBERS" } in the request body.' }, 400);
+    }
+
     const communityId = c.req.param('communityId');
 
     // Get all reverse-index member records for this community

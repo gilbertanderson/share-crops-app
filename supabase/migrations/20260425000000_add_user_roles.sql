@@ -4,5 +4,8 @@ alter table users
   add column if not exists role text not null default 'general'
     check (role in ('general', 'admin'));
 
--- Seed known admin account.
-update users set role = 'admin' where email = 'gilbertjanderson@gmail.com';
+-- Optionally promote an admin account using a deployment-supplied setting.
+-- Example: set app.admin_email = 'admin@example.com';
+update users
+set role = 'admin'
+where email = nullif(current_setting('app.admin_email', true), '');

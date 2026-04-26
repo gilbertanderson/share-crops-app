@@ -248,7 +248,7 @@ export function ChatThread() {
                 const isOwn = message.senderId === currentUser?.id;
                 const canDelete = isAdmin;
                 return (
-                  <div key={message.id} className={`flex items-end gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  <div key={message.id} className={`group flex items-end gap-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
                     {canDelete && !isOwn && (
                       <button
                         type="button"
@@ -263,7 +263,7 @@ export function ChatThread() {
                       </button>
                     )}
                     <div
-                      className={`group relative max-w-[75%] rounded-lg px-4 py-2 ${
+                      className={`relative max-w-[75%] rounded-lg px-4 py-2 ${
                         isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
                       }`}
                     >

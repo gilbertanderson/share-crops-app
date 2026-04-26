@@ -10,7 +10,7 @@ node_modules/
 .env.*.local
 *.local
 .agents/
-skills-lock.json
+
 
 # Supabase and authentication
 supabase/functions/**/.env

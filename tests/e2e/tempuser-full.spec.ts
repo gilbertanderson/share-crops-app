@@ -56,10 +56,6 @@ test.describe('tempUser full app walkthrough', () => {
   test('2 · marketplace shows listings or empty state', async ({ page }) => {
     await login(page);
     // If community setup redirected us, skip — marketplace should load
-    await page.waitForURL(/marketplace|community-setup/, { timeout: 10000 });
-    if (page.url().includes('community-setup')) {
-      test.skip(true, 'tempUser has not completed community setup yet');
-    }
     await expect(page.getByRole('heading', { name: /marketplace/i })).toBeVisible({ timeout: 15000 });
     // Bottom nav should be visible
     await expect(page.getByRole('button', { name: /home/i })).toBeVisible();
@@ -100,26 +96,9 @@ test.describe('tempUser full app walkthrough', () => {
       await descField.fill('Freshly picked from the garden, organic.');
     }
     await page.getByRole('button', { name: /^create listing$/i }).click();
-    const createError = page.getByText(/failed to create listing|error/i).first();
     const marketplaceHeading = page.getByRole('heading', { name: /marketplace/i });
 
-    // Listing creation can fail due to backend constraints (rate limit, validation, etc.).
-    // Treat that as a skipped scenario so the rest of feature coverage still runs.
-    if (await createError.isVisible({ timeout: 12000 }).catch(() => false)) {
-      test.skip(true, 'Create listing failed in environment; skipping listing-create assertion');
-    }
-
-    // If the dialog remains open with no explicit error, treat it as an env-specific backend behavior.
-    const createDialog = page.getByRole('dialog');
-    if (await createDialog.isVisible({ timeout: 3000 }).catch(() => false)) {
-      const cancelBtn = page.getByRole('button', { name: /^cancel$/i });
-      if (await cancelBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-        await cancelBtn.click();
-      }
-      test.skip(true, 'Listing dialog stayed open; skipping strict create-listing success assertion');
-    }
-
-    // Back on marketplace
+    // Back on marketplace — dialog should have closed and listing been created
     await expect(marketplaceHeading).toBeVisible({ timeout: 20000 });
   });
 
@@ -142,9 +121,7 @@ test.describe('tempUser full app walkthrough', () => {
     await login(page);
     await page.waitForURL(/marketplace/, { timeout: 15000 });
     const rankBadge = page.getByText(/community rank #/i).first();
-    if (!(await rankBadge.isVisible({ timeout: 15000 }).catch(() => false))) {
-      test.skip(true, 'Live backend is not returning ranking data in this environment yet');
-    }
+    await expect(rankBadge).toBeVisible({ timeout: 15000 });
 
     const rankedCard = page.locator('[role="button"][aria-label*="View listing"]').filter({
       has: page.getByText(/community rank #/i),
@@ -201,19 +178,16 @@ test.describe('tempUser full app walkthrough', () => {
     await page.waitForURL(/profile/, { timeout: 8000 });
     // Check for Edit Profile button (may or may not exist)
     const editBtn = page.getByRole('button', { name: /edit profile/i });
-    if (await editBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await editBtn.click();
-      // Some form or dialog should open
-      await expect(
-        page.getByRole('dialog').or(page.getByLabel(/name/i))
-      ).toBeVisible({ timeout: 5000 });
-      // Close/cancel
-      const cancelBtn = page.getByRole('button', { name: /cancel/i });
-      if (await cancelBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await cancelBtn.click();
-      }
-    } else {
-      test.skip(true, 'No Edit Profile button visible');
+    await expect(editBtn).toBeVisible({ timeout: 5000 });
+    await editBtn.click();
+    // Some form or dialog should open
+    await expect(
+      page.getByRole('dialog').or(page.getByLabel(/name/i))
+    ).toBeVisible({ timeout: 5000 });
+    // Close/cancel
+    const cancelBtn = page.getByRole('button', { name: /cancel/i });
+    if (await cancelBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await cancelBtn.click();
     }
   });
 

@@ -23,6 +23,7 @@ export default function App() {
     refreshAuth,
     logout,
   } = useAuth();
+  const location = useLocation();
   const [phase, setPhase] = useState<'loading' | 'completing' | 'ready'>('loading');
 
   useEffect(() => {
@@ -33,7 +34,23 @@ export default function App() {
     }
   }, [authLoading]);
 
-  if (phase !== 'ready') {
+  // Redirect recovery tokens that land at wrong path before the loading gate fires.
+  // This happens when redirect_to isn't whitelisted in Supabase and tokens land at /.
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const query = new URLSearchParams(location.search);
+  if (
+    (hash.get('type') === 'recovery' || query.get('type') === 'recovery') &&
+    location.pathname !== '/reset-password'
+  ) {
+    return <Navigate to={'/reset-password' + location.search + location.hash} replace />;
+  }
+
+  // Public routes don't depend on resolved auth state — skip the loading gate so they
+  // render immediately and tests don't race against the 420 ms animation delay.
+  const PUBLIC_PATHS = ['/login', '/reset-password', '/auth/callback'];
+  const isPublicRoute = PUBLIC_PATHS.includes(location.pathname);
+
+  if (phase !== 'ready' && !isPublicRoute) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -138,12 +155,6 @@ function getPostLoginPath(communityCount: number) {
 }
 
 function CatchAll() {
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const query = new URLSearchParams(window.location.search);
-  // Recovery token landed at wrong URL because redirect_to wasn't whitelisted in Supabase
-  if (hash.get('type') === 'recovery' || query.get('type') === 'recovery') {
-    return <Navigate to={'/reset-password' + window.location.search + window.location.hash} replace />;
-  }
   return <Navigate to="/marketplace" replace />;
 }
 

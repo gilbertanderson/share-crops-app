@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { API } from '../../utils/api';
 import type { Listing, User } from '../../types';
 import { Card, CardContent } from './ui/card';

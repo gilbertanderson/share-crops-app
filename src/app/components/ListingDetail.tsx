@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API, AuthManager } from '../../utils/api';
@@ -11,7 +11,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { TomatoRatingDisplay, TomatoRating } from './TomatoRating';
+import { TomatoRatingDisplay } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import {
   AlertDialog,
@@ -379,7 +379,7 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: {
   const [error, setError] = useState('');
   const [existingOffers, setExistingOffers] = useState<Offer[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const loadExistingOffers = async () => {
       try {
         const result = await API.getMyOffers('buyer');
@@ -508,9 +508,8 @@ function MakeOfferDialog({ listingId, onClose, onSuccess }: {
   );
 }
 
-export function SubmitRatingDialog({ offerId, ratedUserId, onClose, onSuccess }: {
+export function SubmitRatingDialog({ offerId, onClose, onSuccess }: {
   offerId: string;
-  ratedUserId: string;
   onClose: () => void;
   onSuccess: () => void;
 }) {

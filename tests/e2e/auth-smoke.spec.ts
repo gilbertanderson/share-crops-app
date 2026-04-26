@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('shows auth screen and can switch between login and signup', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/login');
 
   await expect(page.getByRole('heading', { name: 'Share Crops' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Log In' })).toBeVisible();

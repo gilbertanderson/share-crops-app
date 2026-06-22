@@ -132,56 +132,72 @@ export function Profile() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-start gap-4">
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={user?.profilePhotoUrl} alt={user?.name ? `${user.name}'s profile photo` : 'Profile photo'} />
-                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold">{user?.name}</h2>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-                {user && user.ratingCount > 0 && (
-                  <div className="mt-2">
-                    <TomatoRatingDisplay rating={user.rating} count={user.ratingCount} />
-                  </div>
-                )}
-              </div>
+        {/* Centered hero */}
+        <div className="sc-profile-hero">
+          <Avatar className="w-20 h-20 mx-auto">
+            <AvatarImage src={user?.profilePhotoUrl} alt={user?.name ? `${user.name}'s profile photo` : 'Profile photo'} />
+            <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
+
+          <h2 className="text-xl font-bold mt-3">{user?.name}</h2>
+          <p className="text-sm text-muted-foreground">{user?.email}</p>
+
+          {user && user.ratingCount > 0 && (
+            <div className="flex justify-center mt-2">
+              <TomatoRatingDisplay rating={user.rating} count={user.ratingCount} />
             </div>
+          )}
 
-            {user?.bio && (
-              <div className="pt-2">
-                <p className="text-sm text-foreground">{user.bio}</p>
-              </div>
-            )}
+          {user?.bio && (
+            <p className="text-sm text-foreground max-w-xs mx-auto mt-3 leading-relaxed">{user.bio}</p>
+          )}
 
-            {user?.socialUrl && (
-              <div className="flex items-center gap-2 text-sm">
-                <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                <a
-                  href={user.socialUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline truncate"
-                >
-                  {user.socialUrl}
-                </a>
-              </div>
-            )}
+          {user?.socialUrl && (
+            <div className="flex items-center justify-center gap-2 text-sm mt-3">
+              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <a
+                href={user.socialUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline truncate max-w-[220px]"
+              >
+                {user.socialUrl}
+              </a>
+            </div>
+          )}
 
+          <div className="mt-4">
             <Button
               onClick={() => setShowEditDialog(true)}
-              className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
+              variant="outline"
+              size="sm"
             >
               Edit Profile
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Stat row */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="sc-stat">
+            <div className="sc-stat-num">{listings.length}</div>
+            <div className="sc-stat-lbl">Listings</div>
+          </div>
+          <div className="sc-stat">
+            <div className="sc-stat-num">{ratings.length}</div>
+            <div className="sc-stat-lbl">Reviews</div>
+          </div>
+          <div className="sc-stat">
+            <div className="sc-stat-num">
+              {user && user.ratingCount > 0 ? user.rating.toFixed(1) : '—'}
+            </div>
+            <div className="sc-stat-lbl">Rating</div>
+          </div>
+        </div>
 
         <div className="space-y-3">
           <h3 className="font-semibold">My Listings</h3>

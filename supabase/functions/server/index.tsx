@@ -564,7 +564,7 @@ const setAdminIndex = async (userId: string, isAdmin: boolean) => {
   if (isAdmin) {
     await kv.set(indexKey, { userId, setAt: new Date().toISOString() });
   } else {
-    await kv.delete(indexKey);
+    await kv.del(indexKey);
   }
 };
 
@@ -1688,7 +1688,7 @@ app.post("/make-server-dd877831/offers/:id/complete", async (c) => {
       await kv.set(`listing:community:${listing.communityId}:${offer.listingId}`, listing);
 
       // Remove old seller index and add new seller index
-      await kv.delete(`listing:user:${oldSellerId}:${offer.listingId}`);
+      await kv.del(`listing:user:${oldSellerId}:${offer.listingId}`);
       await kv.set(`listing:user:${newSellerId}:${offer.listingId}`, listing);
     }
 
@@ -1716,10 +1716,10 @@ app.delete("/make-server-dd877831/offers/:id", async (c) => {
     }
 
     // Delete from all KV store keys
-    await kv.delete(`offer:${offerId}`);
-    await kv.delete(`offer:listing:${offer.listingId}:${offerId}`);
-    await kv.delete(`offer:buyer:${offer.buyerId}:${offerId}`);
-    await kv.delete(`offer:seller:${offer.sellerId}:${offerId}`);
+    await kv.del(`offer:${offerId}`);
+    await kv.del(`offer:listing:${offer.listingId}:${offerId}`);
+    await kv.del(`offer:buyer:${offer.buyerId}:${offerId}`);
+    await kv.del(`offer:seller:${offer.sellerId}:${offerId}`);
 
     return c.json({ success: true });
   } catch (error) {

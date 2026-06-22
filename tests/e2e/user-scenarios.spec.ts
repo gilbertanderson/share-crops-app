@@ -129,7 +129,7 @@ test.describe('User Scenarios - Complete Workflows', () => {
     await loginUser(page, seller);
 
     await page.goto(`${API_BASE}/offers`);
-    await page.click('text=As Seller');
+    await page.getByRole('button', { name: /incoming/i }).click();
 
     await expect(page.locator('text=2 bunches of fresh basil')).toBeVisible();
     await expect(page.locator('text=Pending')).toBeVisible();
@@ -287,7 +287,7 @@ test.describe('User Scenarios - Complete Workflows', () => {
     await loginUser(page, seller);
 
     await page.goto(`${API_BASE}/offers`);
-    await page.click('text=As Seller');
+    await page.getByRole('button', { name: /incoming/i }).click();
     await page.click('button:has-text("Accept"):first-of-type');
     await page.waitForTimeout(500);
 
@@ -393,7 +393,7 @@ test.describe('User Scenarios - Complete Workflows', () => {
     await loginUser(page, seller);
 
     await page.goto(`${API_BASE}/offers`);
-    await page.click('text=As Seller');
+    await page.getByRole('button', { name: /incoming/i }).click();
 
     await expect(page.locator('text=Cucumber')).toBeVisible();
     await expect(page.locator('text=Tomatoes and lettuce')).toBeVisible();

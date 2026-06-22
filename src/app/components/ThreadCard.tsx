@@ -13,6 +13,7 @@ interface ThreadCardProps {
 
 export function ThreadCard({ thread, otherUserId, onClick, mobileActive = false }: ThreadCardProps) {
   const [otherUser, setOtherUser] = useState<User | null>(null);
+  const [listingTitle, setListingTitle] = useState<string | null>(null);
   const isSupport = thread.type === 'support';
 
   useEffect(() => {
@@ -27,6 +28,16 @@ export function ThreadCard({ thread, otherUserId, onClick, mobileActive = false 
     };
     loadUser();
   }, [otherUserId, isSupport]);
+
+  // Pull the listing title so the thread row can show "re: {item}" (matches prototype).
+  useEffect(() => {
+    if (isSupport || !thread.listingId) return;
+    let cancelled = false;
+    API.getListing(thread.listingId)
+      .then((data) => { if (!cancelled) setListingTitle(data.listing?.title ?? null); })
+      .catch(() => { /* non-fatal — just omit the reference line */ });
+    return () => { cancelled = true; };
+  }, [thread.listingId, isSupport]);
 
   const displayName = isSupport ? (thread.title ?? 'Support Team') : (otherUser?.name || 'Loading...');
 
@@ -66,6 +77,9 @@ export function ThreadCard({ thread, otherUserId, onClick, mobileActive = false 
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">{displayName}</p>
+            {!isSupport && listingTitle && (
+              <p className="text-xs text-muted-foreground truncate">re: {listingTitle}</p>
+            )}
             <p className="text-sm text-muted-foreground truncate">
               {thread.lastMessage || 'No messages yet'}
             </p>

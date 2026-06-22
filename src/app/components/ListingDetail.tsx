@@ -10,7 +10,6 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
 import { TomatoRatingDisplay, TomatoRating } from './TomatoRating';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import {
@@ -166,42 +165,40 @@ export function ListingDetail() {
         )}
 
         <div className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl font-bold">{listing.title}</h1>
-                {listing.status === 'completed' && (
-                  <span className="flex items-center gap-1 bg-success text-success-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M17.293 3.293a1 1 0 011.414 1.414l-10 10a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l9.293-9.293z" />
-                    </svg>
-                    Exchanged
-                  </span>
-                )}
-                {inSeason && (
-                  <span className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M17.293 3.293a1 1 0 011.414 1.414l-10 10a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l9.293-9.293z" />
-                    </svg>
-                    In Season
-                  </span>
-                )}
-                {communityRank > 0 && (
-                  <span className="flex items-center gap-1 bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full border border-primary/20">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
-                    </svg>
-                    Rank #{communityRank}
-                  </span>
-                )}
-              </div>
-              {listing.quantity && (
-                <p className="text-lg text-muted-foreground mt-1">Quantity: {listing.quantity}</p>
+          <div>
+            <h1 className="text-2xl font-bold">{listing.title}</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {inSeason && (
+                <span className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 3.293a1 1 0 011.414 1.414l-10 10a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l9.293-9.293z" />
+                  </svg>
+                  In Season
+                </span>
               )}
+              {communityRank > 0 && (
+                <span className="flex items-center gap-1 bg-primary/10 text-primary text-xs font-semibold px-2 py-0.5 rounded-full border border-primary/20">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M13 3L4 14h7l-2 7 9-11h-7l2-7z" />
+                  </svg>
+                  Rank #{communityRank}
+                </span>
+              )}
+              {listing.status === 'completed' && (
+                <span className="flex items-center gap-1 bg-success text-success-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M17.293 3.293a1 1 0 011.414 1.414l-10 10a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l9.293-9.293z" />
+                  </svg>
+                  Exchanged
+                </span>
+              )}
+              <span className="bg-secondary text-secondary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                ZIP {listing.zipCode}
+              </span>
             </div>
-            <Badge className="bg-secondary text-secondary-foreground">
-              ZIP {listing.zipCode}
-            </Badge>
+            {listing.quantity && (
+              <p className="text-lg text-muted-foreground mt-1">Quantity: {listing.quantity}</p>
+            )}
           </div>
 
           <p className="text-foreground leading-relaxed">{listing.description}</p>
@@ -213,8 +210,8 @@ export function ListingDetail() {
           )}
 
           {listing.lookingFor && (
-            <div className="bg-muted rounded-lg p-4">
-              <p className="text-sm font-medium text-muted-foreground mb-1">Looking for:</p>
+            <div className="bg-muted rounded-lg p-4 border-l-4 border-accent">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Looking for</p>
               <p className="text-foreground">{listing.lookingFor}</p>
             </div>
           )}

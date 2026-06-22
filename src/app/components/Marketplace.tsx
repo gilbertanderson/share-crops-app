@@ -425,24 +425,13 @@ export function Marketplace() {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">Sort:</span>
-              <Button
-                size="sm"
-                variant={isDateSort ? 'default' : 'outline'}
-                onClick={handleDateSort}
-                className={isDateSort ? 'bg-primary text-primary-foreground h-7 text-xs px-2.5' : 'h-7 text-xs px-2.5'}
-              >
+            <div className="sc-segmented">
+              <button data-active={isDateSort} onClick={handleDateSort}>
                 {sort === 'date-asc' ? 'Old → New' : 'New → Old'}
-              </Button>
-              <Button
-                size="sm"
-                variant={isAlphaSort ? 'default' : 'outline'}
-                onClick={handleAlphaSort}
-                className={isAlphaSort ? 'bg-primary text-primary-foreground h-7 text-xs px-2.5' : 'h-7 text-xs px-2.5'}
-              >
+              </button>
+              <button data-active={isAlphaSort} onClick={handleAlphaSort}>
                 {sort === 'alpha-desc' ? 'Z → A' : 'A → Z'}
-              </Button>
+              </button>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -480,7 +469,7 @@ export function Marketplace() {
           />
         )}
         {showListingsLoader ? (
-          <TomatoLoader label="Loading..." className="py-12" />
+          <TomatoLoader label="Loading..." className="min-h-[60vh] flex flex-col items-center justify-center" />
         ) : listings.length === 0 ? (
           <div className="text-center py-12 space-y-4">
             <svg className="w-16 h-16 mx-auto text-muted-foreground opacity-50" fill="currentColor" viewBox="0 0 24 24">

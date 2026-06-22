@@ -263,8 +263,8 @@ export function ChatThread() {
                       </button>
                     )}
                     <div
-                      className={`relative max-w-[75%] rounded-lg px-4 py-2 ${
-                        isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'
+                      className={`relative max-w-[75%] rounded-2xl px-4 py-2 ${
+                        isOwn ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted text-foreground rounded-bl-md'
                       }`}
                     >
                       <p className="text-sm">{message.content}</p>

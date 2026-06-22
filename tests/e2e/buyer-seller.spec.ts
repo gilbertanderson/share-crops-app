@@ -97,8 +97,8 @@ async function makeOffer(page: Page, listingTitle: string, offerText: string) {
 async function acceptOffer(page: Page, offerText: string) {
   // Navigate to Offers tab
   await page.getByRole('button', { name: /offers/i }).click();
-  // Switch to "As Seller" view
-  await page.getByRole('button', { name: /as seller/i }).click();
+  // Switch to "Incoming" (seller) view
+  await page.getByRole('button', { name: /incoming/i }).click();
   // Wait for the offer to appear
   await expect(page.getByText(offerText, { exact: false })).toBeVisible({ timeout: 15000 });
   // Click Accept
@@ -109,7 +109,7 @@ async function acceptOffer(page: Page, offerText: string) {
 
 async function verifyOfferAccepted(page: Page) {
   await page.getByRole('button', { name: /offers/i }).click();
-  await page.getByRole('button', { name: /as buyer/i }).click();
+  await page.getByRole('button', { name: /outgoing/i }).click();
   await expect(page.getByText(/accepted/i).first()).toBeVisible({ timeout: 15000 });
 }
 

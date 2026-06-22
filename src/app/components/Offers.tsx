@@ -4,7 +4,6 @@ import { API, AuthManager } from '../../utils/api';
 import type { Offer, Listing, User } from '../../types';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
 import { SubmitRatingDialog } from './ListingDetail';
 import { TomatoLoader } from './ui/tomato-loader';
 import {
@@ -17,13 +16,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
-
-const STATUS_COLORS = {
-  pending: 'bg-warning text-warning-foreground',
-  accepted: 'bg-success text-success-foreground',
-  declined: 'bg-error text-error-foreground',
-  completed: 'bg-info text-info-foreground',
-};
 
 const STATUS_LABELS = {
   pending: 'Pending',
@@ -125,16 +117,33 @@ function OfferCard({ offer, viewAs, onAction, queryClient }: {
     <>
       <Card>
         <CardContent className="p-4 space-y-3">
+          {/* Listing thumbnail + title + status */}
           <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold truncate">{listing.title}</h3>
-              <p className="text-sm text-muted-foreground">
-                {viewAs === 'buyer' ? 'Seller' : 'Buyer'}: {otherUser?.name || 'Loading...'}
-              </p>
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              {listing.photos?.[0] ? (
+                <img
+                  src={listing.photos[0]}
+                  alt={listing.title}
+                  className="w-11 h-11 rounded-lg object-cover shrink-0 bg-muted"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-11 h-11 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-muted-foreground opacity-50" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 22C16.4183 22 20 18.4183 20 14C20 9.58172 16.4183 6 12 6C7.58172 6 4 9.58172 4 14C4 18.4183 7.58172 22 12 22Z" />
+                  </svg>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold truncate">{listing.title}</h3>
+                <p className="text-sm text-muted-foreground truncate">
+                  {viewAs === 'buyer' ? 'Seller' : 'Buyer'}: {otherUser?.name || 'Loading...'}
+                </p>
+              </div>
             </div>
-            <Badge className={STATUS_COLORS[offer.status as keyof typeof STATUS_COLORS]}>
+            <span className="sc-status-pill shrink-0" data-status={offer.status}>
               {STATUS_LABELS[offer.status as keyof typeof STATUS_LABELS]}
-            </Badge>
+            </span>
           </div>
 
           <div className="bg-muted rounded-lg p-3 space-y-1">
@@ -270,14 +279,23 @@ export function Offers() {
   const queryClient = useQueryClient();
   const [viewAs, setViewAs] = useState<'buyer' | 'seller'>('buyer');
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['offers', viewAs],
-    queryFn: () => API.getMyOffers(viewAs),
+  // Fetch both sides so the segmented control can show live counts.
+  const { data: buyerData, isLoading: buyerLoading } = useQuery({
+    queryKey: ['offers', 'buyer'],
+    queryFn: () => API.getMyOffers('buyer'),
   });
-  const offers: Offer[] = data?.offers ?? [];
+  const { data: sellerData, isLoading: sellerLoading } = useQuery({
+    queryKey: ['offers', 'seller'],
+    queryFn: () => API.getMyOffers('seller'),
+  });
+
+  const buyerCount = buyerData?.offers?.length ?? 0;
+  const sellerCount = sellerData?.offers?.length ?? 0;
+  const offers: Offer[] = (viewAs === 'buyer' ? buyerData?.offers : sellerData?.offers) ?? [];
+  const isLoading = viewAs === 'buyer' ? buyerLoading : sellerLoading;
 
   const handleAction = () => {
-    queryClient.invalidateQueries({ queryKey: ['offers', viewAs] });
+    queryClient.invalidateQueries({ queryKey: ['offers'] });
   };
 
   return (
@@ -286,30 +304,20 @@ export function Offers() {
         <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
           <h1 className="text-2xl font-bold">My Offers</h1>
 
-          <div className="flex gap-2">
-            <Button
-              variant={viewAs === 'buyer' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewAs('buyer')}
-              className={viewAs === 'buyer' ? 'bg-primary text-primary-foreground' : ''}
-            >
-              As Buyer
-            </Button>
-            <Button
-              variant={viewAs === 'seller' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewAs('seller')}
-              className={viewAs === 'seller' ? 'bg-primary text-primary-foreground' : ''}
-            >
-              As Seller
-            </Button>
+          <div className="sc-segmented">
+            <button data-active={viewAs === 'buyer'} onClick={() => setViewAs('buyer')}>
+              Outgoing ({buyerCount})
+            </button>
+            <button data-active={viewAs === 'seller'} onClick={() => setViewAs('seller')}>
+              Incoming ({sellerCount})
+            </button>
           </div>
         </div>
       </div>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         {isLoading ? (
-          <TomatoLoader label="Loading..." className="py-12" />
+          <TomatoLoader label="Loading..." className="min-h-[60vh] flex flex-col items-center justify-center" />
         ) : offers.length === 0 ? (
           <div className="text-center py-12 space-y-2">
             <svg className="w-16 h-16 mx-auto text-muted-foreground opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">

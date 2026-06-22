@@ -134,7 +134,7 @@ test.describe.serial('Offer Workflow - Buyers and Sellers', () => {
   test('seller can view offers received on their listings', async () => {
     await sellerPage.reload();
     await goToOffers(sellerPage);
-    await sellerPage.getByRole('button', { name: 'As Seller' }).click();
+    await sellerPage.getByRole('button', { name: /incoming/i }).click();
     await sellerPage.waitForTimeout(1000);
     await expect(sellerPage.getByText(OFFER_TEXT, { exact: false })).toBeVisible({ timeout: 20000 });
   });
@@ -150,7 +150,7 @@ test.describe.serial('Offer Workflow - Buyers and Sellers', () => {
   test('buyer sees accepted status on their offer', async () => {
     await buyerPage.reload();
     await goToOffers(buyerPage);
-    await buyerPage.getByRole('button', { name: 'As Buyer' }).click();
+    await buyerPage.getByRole('button', { name: /outgoing/i }).click();
     await expect(buyerPage.getByText('Accepted').first()).toBeVisible({ timeout: 20000 });
   });
 
@@ -183,7 +183,7 @@ test.describe.serial('Offer Workflow - Buyers and Sellers', () => {
 
     await sellerPage.reload();
     await goToOffers(sellerPage);
-    await sellerPage.getByRole('button', { name: 'As Seller' }).click();
+    await sellerPage.getByRole('button', { name: /incoming/i }).click();
     await expect(sellerPage.getByText(declineOffer, { exact: false })).toBeVisible({ timeout: 20000 });
 
     await sellerPage.getByRole('button', { name: /^decline$/i }).first().click();
